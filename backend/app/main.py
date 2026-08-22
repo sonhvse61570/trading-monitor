@@ -89,8 +89,9 @@ async def websocket_endpoint(ws: WebSocket) -> None:
 
 
 async def _background_loop() -> None:
-    """Periodically: strategy scan + price alerts + risk checks."""
+    """Periodically: strategy scan + price alerts + risk checks + daily report."""
     symbols = [s.strip().upper() for s in settings.scan_symbols.split(",")]
+    last_report_day: int | None = None
     while True:
         try:
             await asyncio.sleep(settings.scan_interval_seconds)
@@ -109,5 +110,22 @@ async def _background_loop() -> None:
             fired = await check_risk()
             if fired:
                 logger.warning("Risk warnings fired: %s", [w["rule"] for w in fired])
+
+            # Daily report once per UTC day (if Telegram configured).
+            import time
+
+            today = int(time.time() // 86400)
+            if last_report_day is None:
+                last_report_day = today  # skip first cycle after boot
+            elif today != last_report_day:
+                last_report_day = today
+                try:
+                    from app.reports import generate_report
+
+                    result = await generate_report("daily")
+                    if result:
+                        logger.info("Daily report sent: %s", result["sent"])
+                except Exception:  # noqa: BLE001
+                    logger.exception("Daily report failed")
         except Exception:  # noqa: BLE001 — the loop must never die
             logger.exception("Background loop iteration failed")

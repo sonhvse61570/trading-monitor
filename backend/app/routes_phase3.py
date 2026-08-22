@@ -45,6 +45,27 @@ async def klines_multi(
         raise HTTPException(502, f"Exchange error: {exc}") from exc
 
 
+@router.get("/api/walkforward")
+async def walk_forward_validate(
+    strategy: str,
+    symbol: str = "BTCUSDT",
+    interval: str = Query(default="15m"),
+    limit: int = Query(default=1000, ge=200, le=1000),
+    folds: int = Query(default=3, ge=2, le=5),
+    venue: str = "binance",
+) -> dict[str, Any]:
+    """Walk-forward validation: does the optimized setup hold out-of-sample?"""
+    from app.walkforward import walk_forward
+
+    try:
+        return await walk_forward(strategy, symbol, interval, limit, folds, venue)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("walkforward failed")
+        raise HTTPException(502, f"Validation error: {exc}") from exc
+
+
 @router.get("/api/optimize")
 async def optimize_strategy(
     strategy: str,
