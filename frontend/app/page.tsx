@@ -30,6 +30,8 @@ import MoversPanel from "@/components/MoversPanel";
 import IndicatorsPanel from "@/components/IndicatorsPanel";
 import CandleCountdown from "@/components/CandleCountdown";
 import RangePosition from "@/components/RangePosition";
+import OrderFlowStats from "@/components/OrderFlowStats";
+import VolatilityBadge from "@/components/VolatilityBadge";
 
 const DEFAULT_SYMBOL = "BTCUSDT";
 
@@ -181,6 +183,7 @@ export default function Dashboard() {
         </div>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <CandleCountdown candles={candles} interval={interval} />
+          <VolatilityBadge candles={candles} />
           <FearGreedBadge />
           <ConnectionStatus />
           {selectedTicker && (
@@ -359,7 +362,8 @@ export default function Dashboard() {
         </section>
 
         {/* Right column: order book + tape + ticket */}
-        <section className="row-span-2 grid min-h-0 grid-cols-2 grid-rows-[1fr_auto] bg-bg-panel">
+        <section className="row-span-2 grid min-h-0 grid-cols-2 grid-rows-[auto_1fr_auto] bg-bg-panel">
+          <OrderFlowStats symbol={symbol} />
           <div className="col-span-2 grid min-h-0 grid-cols-2 gap-px bg-bg-border">
             <div className="min-h-0 overflow-hidden bg-bg-panel">
               <OrderBookPanel symbol={symbol} />
