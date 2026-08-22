@@ -320,8 +320,8 @@ export default function Dashboard() {
 
       {/* ===== Desktop: full terminal grid (lg+) ===== */}
       <div className="hidden min-h-0 flex-1 grid-cols-[240px_1fr_260px] grid-rows-[1fr_240px] gap-px bg-bg-border lg:grid">
-        {/* Sidebar: Watchlist / Scanner tabs */}
-        <section className="row-span-2 grid min-h-0 grid-rows-[auto_1fr] bg-bg-panel">
+        {/* Sidebar: Watchlist / Scanner tabs + mini equity */}
+        <section className="row-span-2 grid min-h-0 grid-rows-[auto_1fr_auto] bg-bg-panel">
           <div className="grid grid-cols-2 border-b border-bg-border">
             {(
               [
@@ -368,6 +368,7 @@ export default function Dashboard() {
               <FundingPanel onSelect={setSymbol} />
             )}
           </div>
+          <MiniEquity />
         </section>
 
         {/* Chart */}
@@ -422,11 +423,6 @@ export default function Dashboard() {
             <SignalsFeed />
           </div>
         </section>
-
-        {/* Bottom-left corner: mini performance */}
-        <div className="col-start-1 row-start-2 flex flex-col justify-end bg-bg-panel">
-          <MiniEquity />
-        </div>
       </div>
     </main>
   );
