@@ -53,6 +53,12 @@ class Settings(BaseSettings):
     autotrade_interval: str = "15m"
     autotrade_risk_pct: float = 1.0   # % of available balance risked per trade
 
+    # Trailing stop (applies to positions with an existing SL order)
+    trailing_enabled: bool = True
+    trailing_venue: str = "binance"
+    trailing_activation_pct: float = 1.0  # profit % to arm the trail
+    trailing_trail_pct: float = 0.5       # trail distance behind best price
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

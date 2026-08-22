@@ -60,6 +60,8 @@ export interface Position {
   liquidation_price: number;
   leverage: number;
   margin_type: string;
+  stop_loss?: number | null;
+  r_multiple?: number | null;
 }
 
 export interface Order {

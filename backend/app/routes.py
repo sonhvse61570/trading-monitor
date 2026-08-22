@@ -119,14 +119,34 @@ async def account(venue: str = "binance") -> dict[str, Any]:
 
 @router.get("/api/positions")
 async def positions(venue: str = "binance") -> list[dict[str, Any]]:
+    """Open positions enriched with R-multiple (PnL vs initial risk)."""
     adapter = get_execution_adapter(venue)
     try:
-        return await adapter.positions()
+        pos_list = await adapter.positions()
+        open_orders = await adapter.open_orders()
     except RuntimeError as exc:
         raise HTTPException(400, str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
         logger.exception("positions failed")
         raise HTTPException(502, f"Exchange error: {exc}") from exc
+
+    sl_by_symbol = {
+        o["symbol"]: o["stop_price"]
+        for o in open_orders
+        if o["type"] == "STOP_MARKET" and o["reduce_only"] and o["stop_price"]
+    }
+    out = []
+    for p in pos_list:
+        direction = 1 if p["size"] > 0 else -1
+        entry = p["entry_price"]
+        risk_per_unit = abs(entry - sl_by_symbol[p["symbol"]]) if p["symbol"] in sl_by_symbol else None
+        r_multiple = (
+            round(p["pnl_unrealized"] / (risk_per_unit * abs(p["size"])), 2)
+            if risk_per_unit and abs(p["size"]) > 0
+            else None
+        )
+        out.append({**p, "stop_loss": sl_by_symbol.get(p["symbol"]), "r_multiple": r_multiple})
+    return out
 
 
 @router.get("/api/orders/open")

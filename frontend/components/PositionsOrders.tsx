@@ -69,7 +69,7 @@ function PositionsTable({ positions, onClosePosition, busyOrderId }: Props) {
       <thead className="sticky top-0 bg-bg-panel text-muted">
         <tr>
           <Th>Symbol</Th><Th>Side</Th><Th>Size</Th><Th>Entry</Th>
-          <Th>Mark</Th><Th>Liq.</Th><Th>Lev</Th><Th>PnL</Th><Th></Th>
+          <Th>Mark</Th><Th>SL</Th><Th>R</Th><Th>Lev</Th><Th>PnL</Th><Th></Th>
         </tr>
       </thead>
       <tbody className="font-mono">
@@ -84,7 +84,22 @@ function PositionsTable({ positions, onClosePosition, busyOrderId }: Props) {
               <Td>{Math.abs(p.size)}</Td>
               <Td>{formatPrice(p.entry_price)}</Td>
               <Td>{formatPrice(p.mark_price)}</Td>
-              <Td className="text-down">{formatPrice(p.liquidation_price)}</Td>
+              <Td className="text-down">
+                {p.stop_loss != null ? formatPrice(p.stop_loss) : "—"}
+              </Td>
+              <Td
+                className={
+                  p.r_multiple == null
+                    ? "text-muted"
+                    : p.r_multiple >= 1
+                      ? "text-up"
+                      : p.r_multiple >= 0
+                        ? ""
+                        : "text-down"
+                }
+              >
+                {p.r_multiple != null ? `${p.r_multiple.toFixed(2)}R` : "—"}
+              </Td>
               <Td>{p.leverage}x</Td>
               <Td className={p.pnl_unrealized >= 0 ? "text-up" : "text-down"}>
                 {p.pnl_unrealized >= 0 ? "+" : ""}

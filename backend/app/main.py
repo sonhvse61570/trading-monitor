@@ -111,6 +111,15 @@ async def _background_loop() -> None:
             if fired:
                 logger.warning("Risk warnings fired: %s", [w["rule"] for w in fired])
 
+            # Trailing stops (protect profits on open positions).
+            if settings.trailing_enabled:
+                from app.trailing import manage_trailing_stops
+
+                moved = await manage_trailing_stops()
+                if moved:
+                    logger.info("Trailing SLs moved: %s",
+                                [(m["symbol"], m["new_sl"]) for m in moved])
+
             # Daily report once per UTC day (if Telegram configured).
             import time
 
