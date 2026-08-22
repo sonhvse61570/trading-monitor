@@ -22,6 +22,9 @@ import TradesTape from "@/components/TradesTape";
 import ConnectionStatus from "@/components/ConnectionStatus";
 import Toasts, { pushSignalToast } from "@/components/Toasts";
 import { subscribeWs } from "@/lib/useWsConnection";
+import NewsTicker from "@/components/NewsTicker";
+import FearGreedBadge from "@/components/FearGreedBadge";
+import UpcomingEvents from "@/components/UpcomingEvents";
 
 const DEFAULT_SYMBOL = "BTCUSDT";
 
@@ -172,6 +175,7 @@ export default function Dashboard() {
           </Link>
         </div>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <FearGreedBadge />
           <ConnectionStatus />
           {selectedTicker && (
             <div className="hidden items-baseline gap-3 font-mono text-sm sm:flex">
@@ -196,6 +200,8 @@ export default function Dashboard() {
       <AccountBar account={accountError ? null : account} />
       <AutoTradePanel />
       <RiskPanel />
+      <UpcomingEvents />
+      <NewsTicker />
 
       {/* ===== Mobile: tabbed single column (< lg) ===== */}
       <div className="flex min-h-0 flex-1 flex-col gap-px bg-bg-border lg:hidden">
