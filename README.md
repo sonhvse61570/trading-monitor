@@ -145,6 +145,16 @@ Frontend proxy REST `/api/*` → backend `127.0.0.1:8000`; WebSocket kết nối
 > Pattern bền vững: breakout + volume expansion dương trên cả 4 symbols ở 15m.
 > Chạy lại bất kỳ lúc nào tại `/backtest`. ⚠️ Kết quả quá khứ không bảo đảm tương lai.
 
+## 🧪 Tests
+
+```bash
+cd backend
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python -m pytest        # 31 tests: indicators, strategies,
+                                  # backtest (SL/TP/fees/slippage),
+                                  # analytics FIFO, risk snapshot
+```
+
 ## Deploy với Docker
 
 ```bash
