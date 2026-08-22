@@ -27,6 +27,9 @@ import FearGreedBadge from "@/components/FearGreedBadge";
 import UpcomingEvents from "@/components/UpcomingEvents";
 import MarketOverview from "@/components/MarketOverview";
 import MoversPanel from "@/components/MoversPanel";
+import IndicatorsPanel from "@/components/IndicatorsPanel";
+import CandleCountdown from "@/components/CandleCountdown";
+import RangePosition from "@/components/RangePosition";
 
 const DEFAULT_SYMBOL = "BTCUSDT";
 
@@ -177,6 +180,7 @@ export default function Dashboard() {
           </Link>
         </div>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <CandleCountdown candles={candles} interval={interval} />
           <FearGreedBadge />
           <ConnectionStatus />
           {selectedTicker && (
@@ -209,6 +213,7 @@ export default function Dashboard() {
         selected={symbol}
         onSelect={setSymbol}
       />
+      {selectedTicker && <RangePosition ticker={selectedTicker} />}
 
       {/* ===== Mobile: tabbed single column (< lg) ===== */}
       <div className="flex min-h-0 flex-1 flex-col gap-px bg-bg-border lg:hidden">
@@ -244,6 +249,7 @@ export default function Dashboard() {
                 onIntervalChange={setIntervalState}
               />
             </section>
+            <IndicatorsPanel symbol={symbol} interval={interval} />
             <section className="min-h-0 flex-1 bg-bg-panel">
               {sidebarTab === "watchlist" ? (
                 <Watchlist tickers={tickers} selected={symbol} onSelect={setSymbol} />
@@ -340,13 +346,16 @@ export default function Dashboard() {
         </section>
 
         {/* Chart */}
-        <section className="min-h-0 bg-bg-panel">
-          <CandleChart
-            candles={candles}
-            symbol={symbol}
-            interval={interval}
-            onIntervalChange={setIntervalState}
-          />
+        <section className="grid min-h-0 grid-rows-[1fr_auto] bg-bg-panel">
+          <div className="min-h-0">
+            <CandleChart
+              candles={candles}
+              symbol={symbol}
+              interval={interval}
+              onIntervalChange={setIntervalState}
+            />
+          </div>
+          <IndicatorsPanel symbol={symbol} interval={interval} />
         </section>
 
         {/* Right column: order book + tape + ticket */}
