@@ -25,6 +25,8 @@ import { subscribeWs } from "@/lib/useWsConnection";
 import NewsTicker from "@/components/NewsTicker";
 import FearGreedBadge from "@/components/FearGreedBadge";
 import UpcomingEvents from "@/components/UpcomingEvents";
+import MarketOverview from "@/components/MarketOverview";
+import MoversPanel from "@/components/MoversPanel";
 
 const DEFAULT_SYMBOL = "BTCUSDT";
 
@@ -38,7 +40,7 @@ export default function Dashboard() {
   const [history, setHistory] = useState<Order[]>([]);
   const [busyOrderId, setBusyOrderId] = useState<number | null>(null);
   const [accountError, setAccountError] = useState<string | null>(null);
-  const [sidebarTab, setSidebarTab] = useState<"watchlist" | "scanner">("watchlist");
+  const [sidebarTab, setSidebarTab] = useState<"watchlist" | "scanner" | "movers">("watchlist");
   const [mobileTab, setMobileTab] = useState<"chart" | "book" | "trade">("chart");
 
   // Initial tickers snapshot
@@ -202,6 +204,11 @@ export default function Dashboard() {
       <RiskPanel />
       <UpcomingEvents />
       <NewsTicker />
+      <MarketOverview
+        tickers={tickers}
+        selected={symbol}
+        onSelect={setSymbol}
+      />
 
       {/* ===== Mobile: tabbed single column (< lg) ===== */}
       <div className="flex min-h-0 flex-1 flex-col gap-px bg-bg-border lg:hidden">
@@ -303,9 +310,10 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 border-b border-bg-border">
             {(
               [
-                ["watchlist", "Watchlist"],
-                ["scanner", "Scanner"],
-              ] as ["watchlist" | "scanner", string][]
+                ["watchlist", "Watch"],
+                ["scanner", "Scan"],
+                ["movers", "Movers"],
+              ] as ["watchlist" | "scanner" | "movers", string][]
             ).map(([id, label]) => (
               <button
                 key={id}
@@ -323,8 +331,10 @@ export default function Dashboard() {
           <div className="min-h-0">
             {sidebarTab === "watchlist" ? (
               <Watchlist tickers={tickers} selected={symbol} onSelect={setSymbol} />
-            ) : (
+            ) : sidebarTab === "scanner" ? (
               <ScannerPanel onSelect={setSymbol} />
+            ) : (
+              <MoversPanel tickers={tickers} selected={symbol} onSelect={setSymbol} />
             )}
           </div>
         </section>
