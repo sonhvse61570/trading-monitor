@@ -22,10 +22,14 @@ Dashboard giám sát & giao dịch đa thị trường. **Phase 1 MVP**: Binance
   - `trend_pullback` — EMA50 trend filter + RSI pullback, **SL=1.5×ATR / TP=3×ATR (1:2 RR)**
   - `bollinger_breakout` — BB(20,2) breakout + volume 1.5×, SL=mid band, TP=2×band width
   - `vwap_reversion` — fade ±2% từ rolling VWAP(20)
+- 🤖 **Bot Management UI** (`/bot`): điều khiển toàn bộ bot từ trình duyệt —
+  bật/tắt autotrader (venue/TF/risk config + confirm 2 bước), Dry-run 1 chu kỳ,
+  chạy Optimizer (best params card + top combos), Walk-forward validation
+  (verdict màu ROBUST/MARGINAL/OVERFIT + fold breakdown), bảng strategies
 - ⚙️ **Auto-Trading Engine**: tự đặt lệnh khi có signal —
   **risk-based sizing** (risk % balance per trade theo stop distance), bracket
   SL+TP reduce-only, guards: max positions / skip symbol đã có vị thế /
-  **OFF by default**. Điều khiển ngay trên dashboard (AutoTradePanel) hoặc API
+  **OFF by default**. Điều khiển trên dashboard hoặc trang Bot
 - 🎯 **Parameter Optimizer** (`GET /api/optimize?strategy=&symbol=&interval=`):
   grid-search tham số (27 combos BB breakout, 9 trend pullback, 12 VWAP),
   score = PF × sample confidence → tự tìm setup tốt nhất & loại bỏ strategy kém
@@ -132,6 +136,7 @@ Frontend proxy REST `/api/*` → backend `127.0.0.1:8000`; WebSocket kết nối
 | `GET/POST/DELETE /api/journal` | Trade journal (lưu SQLite) |
 | `POST /api/risk/kill-switch?confirm=YES` | 🛑 Đóng TẤT CẢ vị thế khẩn cấp |
 | `GET /api/autotrade/status` · `/toggle` · `/run-once` | Auto-trading engine |
+| `/bot` | 🤖 Trang quản lý Bot (UI) |
 | `GET /api/auth/status` · `POST /api/auth/verify` | Trạng thái / xác thực token |
 | `WS /ws` | Stream ticker + signal real-time |
 | `WS /ws/candles/{symbol}?interval=` | Stream nến real-time cho 1 symbol |
