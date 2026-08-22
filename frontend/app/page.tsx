@@ -164,6 +164,12 @@ export default function Dashboard() {
           >
             🤖<span className="ml-1 hidden sm:inline">Bot</span>
           </Link>
+          <Link
+            href="/intel"
+            className="rounded border border-bg-border px-2 py-1 text-xs text-muted hover:border-accent hover:text-accent"
+          >
+            🌐<span className="ml-1 hidden sm:inline">Intel</span>
+          </Link>
         </div>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <ConnectionStatus />
