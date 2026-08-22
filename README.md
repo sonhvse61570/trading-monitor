@@ -61,6 +61,9 @@ Dashboard giám sát & giao dịch đa thị trường. **Phase 1 MVP**: Binance
 - 🕯️ **Live candle chart**: nến cập nhật real-time qua WebSocket kline stream
   (không cần reload) + overlay EMA9/EMA21
 - 🧾 **Trades tape**: lệnh khớp gần nhất của symbol đang chọn (bên cạnh order book)
+- 🌐 **Market Intelligence** (`/intel`): tin tức crypto real-time (CoinDesk +
+  Cointelegraph RSS), **lịch kinh tế tuần** với filter impact (ForexFactory),
+  **Fear & Greed Index** + lịch sử 8 ngày — tất cả cached, không cần API key
 - 🔐 **Optional auth**: đặt `API_TOKEN` trong backend/.env để bảo vệ toàn bộ API
   bằng Bearer token (`/api/auth/status` kiểm tra trạng thái)
 - 📄 **Reports**: báo cáo daily/weekly/monthly qua Telegram
@@ -139,6 +142,8 @@ Frontend proxy REST `/api/*` → backend `127.0.0.1:8000`; WebSocket kết nối
 | `POST /api/risk/kill-switch?confirm=YES` | 🛑 Đóng TẤT CẢ vị thế khẩn cấp |
 | `GET /api/autotrade/status` · `/toggle` · `/run-once` | Auto-trading engine |
 | `/bot` | 🤖 Trang quản lý Bot (UI) |
+| `GET /api/intel/news` · `/calendar` · `/fear-greed` | Tin tức · lịch kinh tế · sentiment |
+| `/intel` | 🌐 Trang Market Intelligence (UI) |
 | `GET /api/auth/status` · `POST /api/auth/verify` | Trạng thái / xác thực token |
 | `WS /ws` | Stream ticker + signal real-time |
 | `WS /ws/candles/{symbol}?interval=` | Stream nến real-time cho 1 symbol |
