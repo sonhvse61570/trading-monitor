@@ -250,6 +250,197 @@ class BollingerBreakout(Strategy):
         return None
 
 
+class SuperTrend(Strategy):
+    """ATR-based trailing band trend follower (industry standard).
+
+    LONG when price closes above the supertrend line after being below
+    (trend flip up); SHORT mirrored. SL = opposite band, TP = 2×ATR.
+    """
+
+    name = "supertrend"
+    description = (
+        "Supertrend(10, 3×ATR) flip entries; "
+        "SL = flip level, TP = 2×ATR beyond entry"
+    )
+
+    def __init__(self, period: int = 10, mult: float = 3.0) -> None:
+        self.period = period
+        self.mult = mult
+
+    @staticmethod
+    def _atr_series(candles: list[dict[str, Any]], period: int) -> list[float | None]:
+        trs: list[float | None] = [None]
+        for i in range(1, len(candles)):
+            c = candles[i]
+            prev_close = candles[i - 1]["close"]
+            trs.append(
+                max(
+                    c["high"] - c["low"],
+                    abs(c["high"] - prev_close),
+                    abs(c["low"] - prev_close),
+                )
+            )
+        # Wilder smoothing
+        atrs: list[float | None] = [None] * len(trs)
+        defined = [t for t in trs if t is not None]
+        if len(defined) < period:
+            return atrs
+        prev = sum(defined[:period]) / period
+        atrs[period] = prev
+        for i in range(period + 1, len(trs)):
+            t = trs[i]
+            if t is not None:
+                prev = (prev * (period - 1) + t) / period
+                atrs[i] = prev
+        return atrs
+
+    def evaluate(self, symbol: str, candles: list[dict[str, Any]]) -> Signal | None:
+        need = self.period + 10
+        if len(candles) < need:
+            return None
+        atrs = self._atr_series(candles, self.period)
+        if atrs[-1] is None:
+            return None
+
+        # Proper supertrend walk with RATCHETING bands:
+        # - uptrend: lower band only moves UP (trails the highs)
+        # - downtrend: upper band only moves DOWN (trails the lows)
+        # Flip when close crosses the active trailing band.
+        trend: int | None = None
+        prev_trend: int | None = None
+        lower_band = float("-inf")
+        upper_band = float("inf")
+
+        for i in range(self.period, len(candles)):
+            atr = atrs[i]
+            if atr is None:
+                continue
+            c = candles[i]
+            mid = (c["high"] + c["low"]) / 2
+            basic_lower = mid - self.mult * atr
+            basic_upper = mid + self.mult * atr
+            close = c["close"]
+
+            if trend is None:
+                trend = 1 if close > mid else -1
+                lower_band = basic_lower
+                upper_band = basic_upper
+            elif trend == 1:
+                # Trail the lower band upward only.
+                lower_band = max(lower_band, basic_lower)
+                if close < lower_band:
+                    trend = -1
+                    upper_band = basic_upper
+                    lower_band = float("-inf")
+            else:  # bearish
+                upper_band = min(upper_band, basic_upper)
+                if close > upper_band:
+                    trend = 1
+                    lower_band = basic_lower
+                    upper_band = float("inf")
+
+            if i == len(candles) - 2:
+                prev_trend = trend
+
+        if prev_trend is None or trend is None or prev_trend == trend:
+            return None
+
+        atr = atrs[-1]
+        assert atr is not None
+        last_close = candles[-1]["close"]
+        if trend == 1:
+            sl = last_close - self.mult * atr
+            return Signal(
+                self.name, symbol, "LONG",
+                f"Supertrend flip UP ({self.period},{self.mult}×ATR)",
+                last_close,
+                stop_loss=round(sl, 6),
+                take_profit=round(last_close + 2 * atr, 6),
+            )
+        else:
+            sl = last_close + self.mult * atr
+            return Signal(
+                self.name, symbol, "SHORT",
+                f"Supertrend flip DOWN ({self.period},{self.mult}×ATR)",
+                last_close,
+                stop_loss=round(sl, 6),
+                take_profit=round(last_close - 2 * atr, 6),
+            )
+
+
+class MomentumROC(Strategy):
+    """Rate-of-change momentum with volatility filter.
+
+    LONG when ROC(N) > threshold AND close > EMA(trend) — momentum with
+    trend confirmation. SHORT mirrored. SL/TP from ATR.
+    """
+
+    name = "momentum_roc"
+    description = (
+        "ROC(12) breakout ±1.5% + EMA50 trend filter; "
+        "SL = 1.5×ATR, TP = 3×ATR"
+    )
+
+    def __init__(
+        self,
+        roc_period: int = 12,
+        threshold_pct: float = 1.5,
+        trend_period: int = 50,
+        atr_period: int = 14,
+        sl_atr: float = 1.5,
+        tp_atr: float = 3.0,
+    ) -> None:
+        self.roc_period = roc_period
+        self.threshold_pct = threshold_pct
+        self.trend_period = trend_period
+        self.atr_period = atr_period
+        self.sl_atr = sl_atr
+        self.tp_atr = tp_atr
+
+    def evaluate(self, symbol: str, candles: list[dict[str, Any]]) -> Signal | None:
+        need = max(self.trend_period, self.roc_period, self.atr_period) + 5
+        if len(candles) < need:
+            return None
+        closes = [c["close"] for c in candles]
+        n = self.roc_period
+        roc = (closes[-1] - closes[-n - 1]) / closes[-n - 1] * 100
+        ema_trend = ind.latest(ind.ema(closes, self.trend_period))
+        # Simple ATR
+        trs = []
+        for i in range(-self.atr_period, 0):
+            c = candles[i]
+            prev_close = candles[i - 1]["close"]
+            trs.append(
+                max(
+                    c["high"] - c["low"],
+                    abs(c["high"] - prev_close),
+                    abs(c["low"] - prev_close),
+                )
+            )
+        atr = sum(trs) / len(trs)
+        last = closes[-1]
+
+        if ema_trend is None:
+            return None
+        if roc >= self.threshold_pct and last > ema_trend:
+            return Signal(
+                self.name, symbol, "LONG",
+                f"Momentum {roc:+.1f}% w/ uptrend",
+                last,
+                stop_loss=round(last - self.sl_atr * atr, 6),
+                take_profit=round(last + self.tp_atr * atr, 6),
+            )
+        if roc <= -self.threshold_pct and last < ema_trend:
+            return Signal(
+                self.name, symbol, "SHORT",
+                f"Momentum {roc:+.1f}% w/ downtrend",
+                last,
+                stop_loss=round(last + self.sl_atr * atr, 6),
+                take_profit=round(last - self.tp_atr * atr, 6),
+            )
+        return None
+
+
 class VWAPReversion(Strategy):
     """Intraday mean reversion: fade extensions from rolling VWAP."""
 
@@ -303,6 +494,8 @@ STRATEGIES: dict[str, Strategy] = {
         TrendPullback(),
         BollingerBreakout(),
         VWAPReversion(),
+        SuperTrend(),
+        MomentumROC(),
     ]
 }
 

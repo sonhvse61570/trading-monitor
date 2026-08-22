@@ -68,6 +68,34 @@ class BacktestResult:
             return None
         return round(gross_win / gross_loss, 3)
 
+    @property
+    def sharpe(self) -> float | None:
+        """Per-trade Sharpe (annualization depends on trade frequency)."""
+        import math
+
+        rets = [t["pnl"] - t["fees"] for t in self.trades]
+        n = len(rets)
+        if n < 2:
+            return None
+        mean = sum(rets) / n
+        var = sum((r - mean) ** 2 for r in rets) / (n - 1)
+        std = math.sqrt(var)
+        if std == 0:
+            return None
+        return round(mean / std * math.sqrt(n), 3)
+
+    @property
+    def avg_r_multiple(self) -> float | None:
+        """Average R achieved per trade (needs SL on signals)."""
+        rs = [
+            t["r_multiple"]
+            for t in self.trades
+            if t.get("r_multiple") is not None
+        ]
+        if not rs:
+            return None
+        return round(sum(rs) / len(rs), 3)
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "strategy": self.strategy,
@@ -81,6 +109,8 @@ class BacktestResult:
             "fee_rate_pct": round(self.fee_rate * 100, 4),
             "win_rate": self.win_rate,
             "profit_factor": self.profit_factor,
+            "sharpe": self.sharpe,
+            "avg_r": self.avg_r_multiple,
             "max_drawdown_pct": self.max_drawdown_pct,
             "trades": self.trades[:100],
         }
@@ -113,6 +143,12 @@ def run_backtest(
         direction = 1 if position["side"] == "LONG" else -1
         pnl = (exit_price - position["entry"]) * direction
         fees = (position["entry"] + exit_price) * fee
+        risk = position.get("risk_per_unit")
+        r_mult = (
+            round(pnl / risk, 3)
+            if risk and risk > 0
+            else None
+        )
         result.trades.append(
             {
                 "side": position["side"],
@@ -120,6 +156,7 @@ def run_backtest(
                 "exit": exit_price,
                 "pnl": round(pnl, 6),
                 "fees": round(fees, 6),
+                "r_multiple": r_mult,
                 "entry_time": position["entry_time"],
                 "exit_time": exit_time,
                 "exit_reason": position.get("exit_reason", note),
@@ -167,6 +204,10 @@ def run_backtest(
                 "entry_time": candle["time"],
                 "stop_loss": sig.stop_loss,
                 "take_profit": sig.take_profit,
+                # Initial risk per unit (for R-multiple calc at close).
+                "risk_per_unit": (
+                    abs(entry - sig.stop_loss) if sig.stop_loss else None
+                ),
             }
         elif sig.side == "EXIT" and position is not None:
             direction = 1 if position["side"] == "LONG" else -1
