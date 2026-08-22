@@ -29,6 +29,9 @@ Dashboard giám sát & giao dịch đa thị trường. **Phase 1 MVP**: Binance
 - 🎯 **Parameter Optimizer** (`GET /api/optimize?strategy=&symbol=&interval=`):
   grid-search tham số (27 combos BB breakout, 9 trend pullback, 12 VWAP),
   score = PF × sample confidence → tự tìm setup tốt nhất & loại bỏ strategy kém
+- ✅ **Walk-Forward Validation** (`GET /api/walkforward`): chia N folds,
+  optimize in-sample → evaluate out-of-sample → verdict **ROBUST / MARGINAL /
+  OVERFIT** (BB breakout BTCUSDT 15m hiện: ROBUST, ratio 1.76)
 - ⚡ Signals Feed real-time (WS) — built-in strategies + webhook cho bot ngoài:
   `POST /api/signals/webhook {"strategy","symbol","side","reason","price"}`
 - 🔔 Price alerts + Telegram notifications (cấu hình TELEGRAM_BOT_TOKEN/CHAT_ID)
@@ -124,6 +127,7 @@ Frontend proxy REST `/api/*` → backend `127.0.0.1:8000`; WebSocket kết nối
 | `GET /api/venues` | Danh sách sàn hỗ trợ |
 | `POST /api/backtest` | Chạy backtest strategy (có phí) |
 | `GET /api/optimize?strategy=` | Grid-search tham số tối ưu |
+| `GET /api/walkforward?strategy=` | Walk-forward validation (chống overfit) |
 | `GET /api/risk` · `POST /api/risk/check` | Risk snapshot · force check |
 | `GET/POST/DELETE /api/journal` | Trade journal (lưu SQLite) |
 | `POST /api/risk/kill-switch?confirm=YES` | 🛑 Đóng TẤT CẢ vị thế khẩn cấp |
@@ -144,6 +148,8 @@ Frontend proxy REST `/api/*` → backend `127.0.0.1:8000`; WebSocket kết nối
 
 > Pattern bền vững: breakout + volume expansion dương trên cả 4 symbols ở 15m.
 > Chạy lại bất kỳ lúc nào tại `/backtest`. ⚠️ Kết quả quá khứ không bảo đảm tương lai.
+
+> **Báo cáo daily** tự gửi Telegram mỗi ngày UTC mới (khi đã cấu hình bot).
 
 ## 🧪 Tests
 
