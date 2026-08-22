@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Ticker } from "@/lib/types";
 
 interface Props {
@@ -11,6 +11,8 @@ interface Props {
 
 export default function Watchlist({ tickers, selected, onSelect }: Props) {
   const [query, setQuery] = useState("");
+  const prevPrices = useRef<Record<string, number>>({});
+  const [flashes, setFlashes] = useState<Record<string, "up" | "down">>({});
 
   const filtered = useMemo(() => {
     const q = query.trim().toUpperCase();
@@ -20,6 +22,25 @@ export default function Watchlist({ tickers, selected, onSelect }: Props) {
       .sort((a, b) => b.quote_volume - a.quote_volume)
       .slice(0, 30);
   }, [tickers, query]);
+
+  // Detect price changes → trigger flash animation.
+  useEffect(() => {
+    const next: Record<string, "up" | "down"> = {};
+    let changed = false;
+    for (const t of filtered) {
+      const prev = prevPrices.current[t.symbol];
+      if (prev !== undefined && prev !== t.last_price) {
+        next[t.symbol] = t.last_price > prev ? "up" : "down";
+        changed = true;
+      }
+      prevPrices.current[t.symbol] = t.last_price;
+    }
+    if (changed) {
+      setFlashes(next);
+      const id = setTimeout(() => setFlashes({}), 650);
+      return () => clearTimeout(id);
+    }
+  }, [filtered]);
 
   return (
     <div className="flex h-full flex-col">
@@ -46,7 +67,15 @@ export default function Watchlist({ tickers, selected, onSelect }: Props) {
             }`}
           >
             <span className="truncate">{t.symbol.replace("USDT", "")}</span>
-            <span className="text-right tabular-nums">
+            <span
+              className={`text-right tabular-nums ${
+                flashes[t.symbol] === "up"
+                  ? "flash-up"
+                  : flashes[t.symbol] === "down"
+                    ? "flash-down"
+                    : ""
+              }`}
+            >
               {formatPrice(t.last_price)}
             </span>
             <span

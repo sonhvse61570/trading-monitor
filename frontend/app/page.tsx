@@ -18,6 +18,9 @@ import SignalsFeed from "@/components/SignalsFeed";
 import RiskPanel from "@/components/RiskPanel";
 import AutoTradePanel from "@/components/AutoTradePanel";
 import TradesTape from "@/components/TradesTape";
+import ConnectionStatus from "@/components/ConnectionStatus";
+import Toasts, { pushSignalToast } from "@/components/Toasts";
+import { subscribeWs } from "@/lib/useWsConnection";
 
 const DEFAULT_SYMBOL = "BTCUSDT";
 
@@ -81,6 +84,13 @@ export default function Dashboard() {
     const id = setInterval(refreshPrivate, 5000);
     return () => clearInterval(id);
   }, [refreshPrivate]);
+
+  // Signal toasts via shared WS connection
+  useEffect(() => {
+    return subscribeWs((msg) => {
+      if (msg.type === "signal") pushSignalToast(msg.data as never);
+    });
+  }, []);
 
   const selectedTicker = useMemo(
     () => tickers.find((t) => t.symbol === symbol) ?? null,
@@ -153,22 +163,27 @@ export default function Dashboard() {
             🤖 Bot
           </Link>
         </div>
-        {selectedTicker && (
-          <div className="flex items-baseline gap-3 font-mono text-sm">
-            <span className="text-lg font-semibold tabular-nums">
-              {formatPrice(selectedTicker.last_price)}
-            </span>
-            <span
-              className={
-                selectedTicker.change_pct >= 0 ? "text-up" : "text-down"
-              }
-            >
-              {selectedTicker.change_pct >= 0 ? "+" : ""}
-              {selectedTicker.change_pct.toFixed(2)}%
-            </span>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <ConnectionStatus />
+          {selectedTicker && (
+            <div className="flex items-baseline gap-3 font-mono text-sm">
+              <span className="text-lg font-semibold tabular-nums">
+                {formatPrice(selectedTicker.last_price)}
+              </span>
+              <span
+                className={
+                  selectedTicker.change_pct >= 0 ? "text-up" : "text-down"
+                }
+              >
+                {selectedTicker.change_pct >= 0 ? "+" : ""}
+                {selectedTicker.change_pct.toFixed(2)}%
+              </span>
+            </div>
+          )}
+        </div>
       </header>
+
+      <Toasts />
 
       <AccountBar account={accountError ? null : account} />
       <AutoTradePanel />
