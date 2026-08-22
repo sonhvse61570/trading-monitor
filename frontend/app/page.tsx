@@ -29,6 +29,7 @@ import MarketOverview from "@/components/MarketOverview";
 import MoversPanel from "@/components/MoversPanel";
 import AlertsPanel from "@/components/AlertsPanel";
 import FundingPanel from "@/components/FundingPanel";
+import SmartMoneyPanel from "@/components/SmartMoneyPanel";
 import MiniEquity from "@/components/MiniEquity";
 import QuickActions from "@/components/QuickActions";
 import IndicatorsPanel from "@/components/IndicatorsPanel";
@@ -50,7 +51,7 @@ export default function Dashboard() {
   const [busyOrderId, setBusyOrderId] = useState<number | null>(null);
   const [accountError, setAccountError] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<
-    "watchlist" | "scanner" | "movers" | "alerts" | "funding"
+    "watchlist" | "scanner" | "movers" | "alerts" | "funding" | "whale"
   >("watchlist");
   const [mobileTab, setMobileTab] = useState<"chart" | "book" | "trade">("chart");
 
@@ -328,10 +329,11 @@ export default function Dashboard() {
                 ["watchlist", "Watch"],
                 ["scanner", "Scan"],
                 ["movers", "Movers"],
+                ["whale", "🦈"],
                 ["alerts", "🔔"],
                 ["funding", "💸"],
               ] as [
-                "watchlist" | "scanner" | "movers" | "alerts" | "funding",
+                "watchlist" | "scanner" | "movers" | "whale" | "alerts" | "funding",
                 string,
               ][]
             ).map(([id, label]) => (
@@ -339,11 +341,13 @@ export default function Dashboard() {
                 key={id}
                 onClick={() => setSidebarTab(id)}
                 title={
-                  id === "alerts"
-                    ? "Price alerts"
-                    : id === "funding"
-                      ? "Funding rates"
-                      : undefined
+                  id === "whale"
+                    ? "Smart money radar"
+                    : id === "alerts"
+                      ? "Price alerts"
+                      : id === "funding"
+                        ? "Funding rates"
+                        : undefined
                 }
                 className={`py-2 text-xs ${
                   sidebarTab === id
@@ -362,6 +366,8 @@ export default function Dashboard() {
               <ScannerPanel onSelect={setSymbol} />
             ) : sidebarTab === "movers" ? (
               <MoversPanel tickers={tickers} selected={symbol} onSelect={setSymbol} />
+            ) : sidebarTab === "whale" ? (
+              <SmartMoneyPanel symbol={symbol} />
             ) : sidebarTab === "alerts" ? (
               <AlertsPanel symbol={symbol} />
             ) : (

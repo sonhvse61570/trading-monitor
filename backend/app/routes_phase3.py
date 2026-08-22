@@ -76,6 +76,17 @@ async def intel_fear_greed() -> dict[str, Any]:
     return await fetch_fear_greed()
 
 
+@router.get("/api/intel/smart-money")
+async def intel_smart_money(
+    symbol: str,
+    min_notional: float = Query(default=50000, ge=1000),
+) -> dict[str, Any]:
+    """Whale prints + CVD + order-book walls for one symbol."""
+    from app.whale import smart_money
+
+    return await smart_money(symbol, min_notional)
+
+
 @router.get("/api/walkforward")
 async def walk_forward_validate(
     strategy: str,
