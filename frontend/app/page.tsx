@@ -1,6 +1,7 @@
 "use client";
 
 // Main dashboard — assembles all panels.
+// Responsive: mobile = tabbed single column; desktop (lg+) = terminal grid.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useLiveTickers } from "@/lib/useLiveTickers";
@@ -35,6 +36,7 @@ export default function Dashboard() {
   const [busyOrderId, setBusyOrderId] = useState<number | null>(null);
   const [accountError, setAccountError] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<"watchlist" | "scanner">("watchlist");
+  const [mobileTab, setMobileTab] = useState<"chart" | "book" | "trade">("chart");
 
   // Initial tickers snapshot
   useEffect(() => {
@@ -130,11 +132,11 @@ export default function Dashboard() {
   return (
     <main className="flex h-screen flex-col overflow-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-bg-border bg-bg-panel px-4 py-2">
-        <div className="flex items-center gap-3">
-          <h1 className="text-sm font-bold tracking-wide">
-            📈 TRADING MONITOR{" "}
-            <span className="ml-2 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] font-medium text-accent">
+      <header className="flex items-center justify-between gap-2 border-b border-bg-border bg-bg-panel px-3 py-2 sm:px-4">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <h1 className="truncate text-sm font-bold tracking-wide">
+            📈<span className="ml-1 hidden sm:inline">TRADING MONITOR</span>
+            <span className="ml-1 hidden rounded bg-accent/15 px-1.5 py-0.5 text-[10px] font-medium text-accent md:inline">
               Binance USD-M Futures
             </span>
           </h1>
@@ -142,31 +144,31 @@ export default function Dashboard() {
             href="/analytics"
             className="rounded border border-bg-border px-2 py-1 text-xs text-muted hover:border-accent hover:text-accent"
           >
-            📊 Analytics
+            📊<span className="ml-1 hidden sm:inline">Analytics</span>
           </Link>
           <Link
             href="/backtest"
             className="rounded border border-bg-border px-2 py-1 text-xs text-muted hover:border-accent hover:text-accent"
           >
-            🧪 Backtest
+            🧪<span className="ml-1 hidden sm:inline">Backtest</span>
           </Link>
           <Link
             href="/journal"
             className="rounded border border-bg-border px-2 py-1 text-xs text-muted hover:border-accent hover:text-accent"
           >
-            📓 Journal
+            📓<span className="ml-1 hidden sm:inline">Journal</span>
           </Link>
           <Link
             href="/bot"
             className="rounded border border-accent/60 bg-accent/10 px-2 py-1 text-xs font-semibold text-accent hover:bg-accent/20"
           >
-            🤖 Bot
+            🤖<span className="ml-1 hidden sm:inline">Bot</span>
           </Link>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <ConnectionStatus />
           {selectedTicker && (
-            <div className="flex items-baseline gap-3 font-mono text-sm">
+            <div className="hidden items-baseline gap-3 font-mono text-sm sm:flex">
               <span className="text-lg font-semibold tabular-nums">
                 {formatPrice(selectedTicker.last_price)}
               </span>
@@ -189,8 +191,101 @@ export default function Dashboard() {
       <AutoTradePanel />
       <RiskPanel />
 
-      {/* Main grid */}
-      <div className="grid min-h-0 flex-1 grid-cols-[240px_1fr_260px] grid-rows-[1fr_240px] gap-px bg-bg-border">
+      {/* ===== Mobile: tabbed single column (< lg) ===== */}
+      <div className="flex min-h-0 flex-1 flex-col gap-px bg-bg-border lg:hidden">
+        <nav className="grid grid-cols-3 border-b border-bg-border bg-bg-panel text-xs">
+          {(
+            [
+              ["chart", "📈 Chart"],
+              ["book", "📖 Sổ lệnh"],
+              ["trade", "⚡ Giao dịch"],
+            ] as ["chart" | "book" | "trade", string][]
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setMobileTab(id)}
+              className={`py-2 ${
+                mobileTab === id
+                  ? "bg-bg-hover font-semibold text-white"
+                  : "text-muted"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+
+        {mobileTab === "chart" && (
+          <>
+            <section className="h-56 shrink-0 bg-bg-panel">
+              <CandleChart
+                candles={candles}
+                symbol={symbol}
+                interval={interval}
+                onIntervalChange={setIntervalState}
+              />
+            </section>
+            <section className="min-h-0 flex-1 bg-bg-panel">
+              {sidebarTab === "watchlist" ? (
+                <Watchlist tickers={tickers} selected={symbol} onSelect={setSymbol} />
+              ) : (
+                <ScannerPanel onSelect={setSymbol} />
+              )}
+            </section>
+            <div className="grid h-9 shrink-0 grid-cols-2 border-t border-bg-border bg-bg-panel text-xs">
+              {(["watchlist", "scanner"] as const).map((id) => (
+                <button
+                  key={id}
+                  onClick={() => setSidebarTab(id)}
+                  className={
+                    sidebarTab === id
+                      ? "bg-bg-hover font-semibold text-white"
+                      : "text-muted"
+                  }
+                >
+                  {id === "watchlist" ? "Watchlist" : "Scanner"}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {mobileTab === "book" && (
+          <>
+            <section className="min-h-0 flex-1 bg-bg-panel">
+              <OrderBookPanel symbol={symbol} />
+            </section>
+            <section className="min-h-0 flex-1 border-t border-bg-border bg-bg-panel">
+              <TradesTape symbol={symbol} />
+            </section>
+          </>
+        )}
+
+        {mobileTab === "trade" && (
+          <>
+            <section className="max-h-[45%] shrink-0 overflow-y-auto border-b border-bg-border bg-bg-panel">
+              <OrderTicket
+                symbol={symbol}
+                lastPrice={selectedTicker?.last_price ?? null}
+                onPlaced={refreshPrivate}
+              />
+            </section>
+            <section className="min-h-0 flex-1 bg-bg-panel">
+              <PositionsOrders
+                positions={positions}
+                openOrders={openOrders}
+                history={history}
+                onCancelOrder={handleCancel}
+                onClosePosition={handleClosePosition}
+                busyOrderId={busyOrderId}
+              />
+            </section>
+          </>
+        )}
+      </div>
+
+      {/* ===== Desktop: full terminal grid (lg+) ===== */}
+      <div className="hidden min-h-0 flex-1 grid-cols-[240px_1fr_260px] grid-rows-[1fr_240px] gap-px bg-bg-border lg:grid">
         {/* Sidebar: Watchlist / Scanner tabs */}
         <section className="row-span-2 grid min-h-0 grid-rows-[auto_1fr] bg-bg-panel">
           <div className="grid grid-cols-2 border-b border-bg-border">
