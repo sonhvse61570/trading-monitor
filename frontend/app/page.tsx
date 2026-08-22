@@ -29,6 +29,8 @@ import MarketOverview from "@/components/MarketOverview";
 import MoversPanel from "@/components/MoversPanel";
 import AlertsPanel from "@/components/AlertsPanel";
 import FundingPanel from "@/components/FundingPanel";
+import MiniEquity from "@/components/MiniEquity";
+import QuickActions from "@/components/QuickActions";
 import IndicatorsPanel from "@/components/IndicatorsPanel";
 import CandleCountdown from "@/components/CandleCountdown";
 import RangePosition from "@/components/RangePosition";
@@ -403,20 +405,28 @@ export default function Dashboard() {
 
         {/* Bottom panel: positions/orders + signals */}
         <section className="col-start-2 grid min-h-0 grid-cols-[1fr_320px] gap-px bg-bg-border">
-          <div className="min-h-0 bg-bg-panel">
-            <PositionsOrders
-              positions={positions}
-              openOrders={openOrders}
-              history={history}
-              onCancelOrder={handleCancel}
-              onClosePosition={handleClosePosition}
-              busyOrderId={busyOrderId}
-            />
+          <div className="grid min-h-0 grid-rows-[1fr_auto] bg-bg-panel">
+            <div className="min-h-0">
+              <PositionsOrders
+                positions={positions}
+                openOrders={openOrders}
+                history={history}
+                onCancelOrder={handleCancel}
+                onClosePosition={handleClosePosition}
+                busyOrderId={busyOrderId}
+              />
+            </div>
+            <QuickActions symbol={symbol} onDone={refreshPrivate} />
           </div>
           <div className="min-h-0 bg-bg-panel">
             <SignalsFeed />
           </div>
         </section>
+
+        {/* Bottom-left corner: mini performance */}
+        <div className="col-start-1 row-start-2 flex flex-col justify-end bg-bg-panel">
+          <MiniEquity />
+        </div>
       </div>
     </main>
   );
