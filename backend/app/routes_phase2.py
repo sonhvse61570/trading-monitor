@@ -126,9 +126,11 @@ async def get_indicators(
 
 
 @router.get("/api/scanner")
-async def market_scanner() -> dict[str, Any]:
+async def market_scanner(venue: str = Query(default="binance")) -> dict[str, Any]:
     try:
-        return await scan()
+        return await scan(venue)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
         logger.exception("scanner failed")
         raise HTTPException(502, f"Exchange error: {exc}") from exc

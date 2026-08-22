@@ -90,11 +90,17 @@ export interface PlaceOrderPayload {
 
 // ---- Phase 2 ----
 
+export interface ScanRow extends Ticker {
+  funding_rate?: number | null;
+}
+
 export interface ScanResult {
-  gainers: Ticker[];
-  losers: Ticker[];
-  movers: Ticker[];
-  top_volume: Ticker[];
+  venue: string;
+  gainers: ScanRow[];
+  losers: ScanRow[];
+  movers: ScanRow[];
+  top_volume: ScanRow[];
+  top_funding: { symbol: string; funding_rate: number }[];
   total_symbols: number;
 }
 

@@ -52,7 +52,10 @@ export const api = {
     ),
 
   // Phase 2
-  scanner: () => request<import("./types").ScanResult>("/api/scanner"),
+  scanner: (venue = "binance") =>
+    request<import("./types").ScanResult>(
+      `/api/scanner?venue=${encodeURIComponent(venue)}`
+    ),
   indicators: (symbol: string, interval = "15m") =>
     request<Record<string, unknown>>(
       `/api/indicators?symbol=${symbol}&interval=${interval}`
