@@ -16,12 +16,14 @@ Dashboard giám sát & giao dịch đa thị trường. **Phase 1 MVP**: Binance
 ### Phase 2 — Intelligence
 - 🧮 Indicators API: EMA/SMA/RSI/MACD/Bollinger/VWAP (pure Python)
 - 🔍 Market Scanner: top gainers/losers/volume leaders (tab trong sidebar)
-- 🤖 **5 Strategies** (chạy nền mỗi 60s):
+- 🤖 **7 Strategies** (chạy nền mỗi 60s):
   - `rsi_mean_reversion` — RSI(14) 30/70
   - `ma_cross` — EMA9/21 cross
   - `trend_pullback` — EMA50 trend filter + RSI pullback, **SL=1.5×ATR / TP=3×ATR (1:2 RR)**
   - `bollinger_breakout` — BB(20,2) breakout + volume 1.5×, SL=mid band, TP=2×band width
   - `vwap_reversion` — fade ±2% từ rolling VWAP(20)
+  - `supertrend` — Supertrend(10, 3×ATR) flip entries (ratcheting trailing bands)
+  - `momentum_roc` — ROC(12) ±1.5% + EMA50 trend filter, SL/TP từ ATR
 - 🤖 **Bot Management UI** (`/bot`): điều khiển toàn bộ bot từ trình duyệt —
   bật/tắt autotrader (venue/TF/risk config + confirm 2 bước), Dry-run 1 chu kỳ,
   chạy Optimizer (best params card + top combos), Walk-forward validation
@@ -145,11 +147,21 @@ Frontend proxy REST `/api/*` → backend `127.0.0.1:8000`; WebSocket kết nối
 
 | Symbol / TF | Trades | Win rate | PnL net | Profit factor |
 |---|---|---|---|---|
-| **BTCUSDT 15m** | 13 | **61.5%** | **+$12,766** | **9.0** |
+| **BTCUSDT 15m** | 13 | **61.5%** | **+$12,831** | **9.0** (Sharpe 2.3) |
 | ETHUSDT 15m | 7 | 71.4% | +$513 | 7.7 |
 | BTCUSDT 1h | 13 | 38.5% | +$7,454 | 2.2 |
 | BNBUSDT 15m | 21 | 38.1% | +$54 | 1.9 |
 | SOLUSDT 1h | 13 | 23.1% | -$0.25 | 1.0 |
+
+**Nghiên cứu mở rộng (BTCUSDT 15m ×1000 nến):**
+
+| Strategy | Trades | WR | PnL | PF | Sharpe | Avg R |
+|---|---|---|---|---|---|---|
+| bollinger_breakout | 13 | 61.5% | +$12,831 | 9.0 | 2.27 | 1.20 |
+| momentum_roc | 14 | 64.3% | +$4,172 | 2.0 | 1.12 | 0.75 |
+| supertrend | 14 | **85.7%** | +$916 | 2.0 | 1.03 | — |
+| vwap_reversion | 3 | 33.3% | +$794 | 1.5 | 0.26 | 0.33 |
+| trend_pullback | 3 | 33.3% | -$74 | 0.7 | -0.24 | -0.09 |
 
 > Pattern bền vững: breakout + volume expansion dương trên cả 4 symbols ở 15m.
 > Chạy lại bất kỳ lúc nào tại `/backtest`. ⚠️ Kết quả quá khứ không bảo đảm tương lai.
