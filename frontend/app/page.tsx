@@ -27,6 +27,8 @@ import FearGreedBadge from "@/components/FearGreedBadge";
 import UpcomingEvents from "@/components/UpcomingEvents";
 import MarketOverview from "@/components/MarketOverview";
 import MoversPanel from "@/components/MoversPanel";
+import AlertsPanel from "@/components/AlertsPanel";
+import FundingPanel from "@/components/FundingPanel";
 import IndicatorsPanel from "@/components/IndicatorsPanel";
 import CandleCountdown from "@/components/CandleCountdown";
 import RangePosition from "@/components/RangePosition";
@@ -45,7 +47,9 @@ export default function Dashboard() {
   const [history, setHistory] = useState<Order[]>([]);
   const [busyOrderId, setBusyOrderId] = useState<number | null>(null);
   const [accountError, setAccountError] = useState<string | null>(null);
-  const [sidebarTab, setSidebarTab] = useState<"watchlist" | "scanner" | "movers">("watchlist");
+  const [sidebarTab, setSidebarTab] = useState<
+    "watchlist" | "scanner" | "movers" | "alerts" | "funding"
+  >("watchlist");
   const [mobileTab, setMobileTab] = useState<"chart" | "book" | "trade">("chart");
 
   // Initial tickers snapshot
@@ -322,11 +326,23 @@ export default function Dashboard() {
                 ["watchlist", "Watch"],
                 ["scanner", "Scan"],
                 ["movers", "Movers"],
-              ] as ["watchlist" | "scanner" | "movers", string][]
+                ["alerts", "🔔"],
+                ["funding", "💸"],
+              ] as [
+                "watchlist" | "scanner" | "movers" | "alerts" | "funding",
+                string,
+              ][]
             ).map(([id, label]) => (
               <button
                 key={id}
                 onClick={() => setSidebarTab(id)}
+                title={
+                  id === "alerts"
+                    ? "Price alerts"
+                    : id === "funding"
+                      ? "Funding rates"
+                      : undefined
+                }
                 className={`py-2 text-xs ${
                   sidebarTab === id
                     ? "bg-bg-hover font-semibold text-white"
@@ -342,8 +358,12 @@ export default function Dashboard() {
               <Watchlist tickers={tickers} selected={symbol} onSelect={setSymbol} />
             ) : sidebarTab === "scanner" ? (
               <ScannerPanel onSelect={setSymbol} />
-            ) : (
+            ) : sidebarTab === "movers" ? (
               <MoversPanel tickers={tickers} selected={symbol} onSelect={setSymbol} />
+            ) : sidebarTab === "alerts" ? (
+              <AlertsPanel symbol={symbol} />
+            ) : (
+              <FundingPanel onSelect={setSymbol} />
             )}
           </div>
         </section>
