@@ -80,6 +80,81 @@ export const api = {
       "/api/analytics/performance"
     ),
 
+  // Bot management
+  autotradeStatus: () =>
+    request<{
+      enabled: boolean;
+      last_run: number | null;
+      trades_opened: number;
+      errors: string[];
+    }>("/api/autotrade/status"),
+  autotradeToggle: (
+    enabled: boolean,
+    venue = "binance",
+    interval = "15m",
+    riskPct = 1.0
+  ) =>
+    request<{ enabled: boolean; venue: string; interval: string; risk_pct: number }>(
+      `/api/autotrade/toggle?enabled=${enabled}&venue=${venue}&interval=${interval}&risk_pct=${riskPct}`,
+      { method: "POST" }
+    ),
+  autotradeRunOnce: () =>
+    request<{ executed: unknown[] }>("/api/autotrade/run-once", {
+      method: "POST",
+    }),
+  optimize: (
+    strategy: string,
+    symbol: string,
+    interval: string,
+    limit = 1000,
+    venue = "binance"
+  ) =>
+    request<{
+      strategy: string;
+      symbol: string;
+      interval: string;
+      combos_tested: number;
+      best: {
+        params: Record<string, number>;
+        trades: number;
+        win_rate: number | null;
+        pnl_net: number;
+        profit_factor: number | null;
+        max_drawdown_pct: number;
+        score: number;
+      };
+      top: {
+        params: Record<string, number>;
+        trades: number;
+        win_rate: number | null;
+        pnl_net: number;
+        profit_factor: number | null;
+        score: number;
+      }[];
+    }>(
+      `/api/optimize?strategy=${strategy}&symbol=${symbol}&interval=${interval}&limit=${limit}&venue=${venue}`
+    ),
+  walkForward: (
+    strategy: string,
+    symbol: string,
+    interval: string,
+    folds = 3,
+    limit = 1000,
+    venue = "binance"
+  ) =>
+    request<{
+      strategy: string;
+      symbol: string;
+      interval: string;
+      fold_results: Record<string, unknown>[];
+      avg_in_sample_pf: number | null;
+      avg_out_sample_pf: number | null;
+      oos_is_ratio: number | null;
+      verdict: string;
+    }>(
+      `/api/walkforward?strategy=${strategy}&symbol=${symbol}&interval=${interval}&folds=${folds}&limit=${limit}&venue=${venue}`
+    ),
+
   // Phase 3
   venues: () =>
     request<{ venue: string; market: string }[]>("/api/venues"),

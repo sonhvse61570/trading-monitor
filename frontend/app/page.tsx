@@ -146,6 +146,12 @@ export default function Dashboard() {
           >
             📓 Journal
           </Link>
+          <Link
+            href="/bot"
+            className="rounded border border-accent/60 bg-accent/10 px-2 py-1 text-xs font-semibold text-accent hover:bg-accent/20"
+          >
+            🤖 Bot
+          </Link>
         </div>
         {selectedTicker && (
           <div className="flex items-baseline gap-3 font-mono text-sm">
