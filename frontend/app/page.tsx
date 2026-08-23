@@ -323,24 +323,19 @@ export default function Dashboard() {
         className="hidden min-h-0 flex-1 gap-px bg-bg-border lg:flex"
         style={{ flexDirection: "row" }}
       >
-        {/* Left sidebar + resizer */}
+        {/* Left sidebar */}
         {sidebarOpen ? (
-          <>
-            <div className="flex min-w-0 shrink-0" style={{ width: leftW }}>
-              <div className="min-w-0 flex-1">
-                <SidebarPanel
-                  tab={sidebarTab}
-                  onTabChange={setSidebarTab}
-                  tickers={tickers}
-                  symbol={symbol}
-                  currentPrice={selectedTicker?.last_price ?? null}
-                  interval={interval}
-                  onSelect={setSymbol}
-                />
-              </div>
-              <Resizer storageKey="tm.leftPanelW" side="left" min={200} max={420} onWidth={persistLeft} />
-            </div>
-          </>
+          <section className="min-h-0 shrink-0 overflow-hidden" style={{ width: leftW }}>
+            <SidebarPanel
+              tab={sidebarTab}
+              onTabChange={setSidebarTab}
+              tickers={tickers}
+              symbol={symbol}
+              currentPrice={selectedTicker?.last_price ?? null}
+              interval={interval}
+              onSelect={setSymbol}
+            />
+          </section>
         ) : (
           /* Collapsed rail */
           <section className="flex min-h-0 shrink-0 flex-col items-center gap-3 bg-bg-panel pt-3" style={{ width: 40 }}>
@@ -358,6 +353,11 @@ export default function Dashboard() {
               Phân tích
             </span>
           </section>
+        )}
+
+        {/* Left resizer — own flex slot, cannot overlap neighbors */}
+        {sidebarOpen && (
+          <Resizer storageKey="tm.leftPanelW" side="left" min={200} max={420} onWidth={persistLeft} />
         )}
 
         {/* Center column: chart + bottom panel */}
@@ -396,10 +396,12 @@ export default function Dashboard() {
           </section>
         </div>
 
-        {/* Right column + resizer */}
-        <div className="flex min-w-0 shrink-0 overflow-hidden" style={{ width: rightW }}>
-          <Resizer storageKey="tm.rightPanelW" side="right" min={220} max={460} onWidth={persistRight} />
-          <section className="grid min-h-0 w-full min-w-0 grid-cols-2 grid-rows-[auto_1fr_auto] bg-bg-panel">
+        {/* Right resizer — own flex slot */}
+        <Resizer storageKey="tm.rightPanelW" side="right" min={220} max={460} onWidth={persistRight} />
+
+        {/* Right column */}
+        <section className="grid min-h-0 shrink-0 overflow-hidden bg-bg-panel" style={{ width: rightW }}>
+          <div className="grid min-h-0 w-full grid-cols-2 grid-rows-[auto_1fr_auto]">
             <OrderFlowStats symbol={symbol} />
             <div className="col-span-2 grid min-h-0 grid-cols-2 gap-px bg-bg-border">
               <div className="min-h-0 overflow-hidden bg-bg-panel">
@@ -421,8 +423,8 @@ export default function Dashboard() {
                 onPlaced={refreshPrivate}
               />
             </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </div>
     </main>
   );
