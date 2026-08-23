@@ -30,6 +30,8 @@ import MoversPanel from "@/components/MoversPanel";
 import AlertsPanel from "@/components/AlertsPanel";
 import FundingPanel from "@/components/FundingPanel";
 import SmartMoneyPanel from "@/components/SmartMoneyPanel";
+import MTFMatrix from "@/components/MTFMatrix";
+import PivotLevels from "@/components/PivotLevels";
 import MiniEquity from "@/components/MiniEquity";
 import QuickActions from "@/components/QuickActions";
 import IndicatorsPanel from "@/components/IndicatorsPanel";
@@ -51,7 +53,7 @@ export default function Dashboard() {
   const [busyOrderId, setBusyOrderId] = useState<number | null>(null);
   const [accountError, setAccountError] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<
-    "watchlist" | "scanner" | "movers" | "alerts" | "funding" | "whale"
+    "watchlist" | "scanner" | "movers" | "whale" | "pivots" | "alerts" | "funding"
   >("watchlist");
   const [mobileTab, setMobileTab] = useState<"chart" | "book" | "trade">("chart");
 
@@ -224,6 +226,7 @@ export default function Dashboard() {
         onSelect={setSymbol}
       />
       {selectedTicker && <RangePosition ticker={selectedTicker} />}
+      <MTFMatrix symbol={symbol} />
 
       {/* ===== Mobile: tabbed single column (< lg) ===== */}
       <div className="flex min-h-0 flex-1 flex-col gap-px bg-bg-border lg:hidden">
@@ -330,10 +333,11 @@ export default function Dashboard() {
                 ["scanner", "Scan"],
                 ["movers", "Movers"],
                 ["whale", "🦈"],
+                ["pivots", "🎯"],
                 ["alerts", "🔔"],
                 ["funding", "💸"],
               ] as [
-                "watchlist" | "scanner" | "movers" | "whale" | "alerts" | "funding",
+                "watchlist" | "scanner" | "movers" | "whale" | "pivots" | "alerts" | "funding",
                 string,
               ][]
             ).map(([id, label]) => (
@@ -343,11 +347,13 @@ export default function Dashboard() {
                 title={
                   id === "whale"
                     ? "Smart money radar"
-                    : id === "alerts"
-                      ? "Price alerts"
-                      : id === "funding"
-                        ? "Funding rates"
-                        : undefined
+                    : id === "pivots"
+                      ? "Pivot points"
+                      : id === "alerts"
+                        ? "Price alerts"
+                        : id === "funding"
+                          ? "Funding rates"
+                          : undefined
                 }
                 className={`py-2 text-xs ${
                   sidebarTab === id
@@ -368,6 +374,11 @@ export default function Dashboard() {
               <MoversPanel tickers={tickers} selected={symbol} onSelect={setSymbol} />
             ) : sidebarTab === "whale" ? (
               <SmartMoneyPanel symbol={symbol} />
+            ) : sidebarTab === "pivots" ? (
+              <PivotLevels
+                symbol={symbol}
+                currentPrice={selectedTicker?.last_price ?? null}
+              />
             ) : sidebarTab === "alerts" ? (
               <AlertsPanel symbol={symbol} />
             ) : (

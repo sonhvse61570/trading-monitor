@@ -76,6 +76,22 @@ async def intel_fear_greed() -> dict[str, Any]:
     return await fetch_fear_greed()
 
 
+@router.get("/api/analysis/mtf")
+async def analysis_mtf(symbol: str) -> dict[str, Any]:
+    """Multi-timeframe trend matrix (5m→4h)."""
+    from app.mtf import mtf_trend
+
+    return await mtf_trend(symbol)
+
+
+@router.get("/api/analysis/pivots")
+async def analysis_pivots(symbol: str) -> dict[str, Any]:
+    """Classic pivot points from the last completed daily candle."""
+    from app.mtf import pivot_points
+
+    return await pivot_points(symbol)
+
+
 @router.get("/api/intel/smart-money")
 async def intel_smart_money(
     symbol: str,
