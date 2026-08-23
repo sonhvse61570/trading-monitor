@@ -52,6 +52,17 @@ async def confluence(symbol: str) -> dict[str, Any]:
     return await confluence_score(symbol)
 
 
+@router.get("/patterns")
+async def patterns(
+    symbol: str,
+    interval: str = Query(default="15m"),
+) -> dict[str, Any]:
+    """RSI divergences + candlestick patterns at swing extremes."""
+    from app.patterns import detect
+
+    return await detect(symbol, interval)
+
+
 @router.get("/volume-profile")
 async def vp(
     symbol: str,
