@@ -32,6 +32,7 @@ import FundingPanel from "@/components/FundingPanel";
 import SmartMoneyPanel from "@/components/SmartMoneyPanel";
 import WhaleHeatmap from "@/components/WhaleHeatmap";
 import PositionCalculator from "@/components/PositionCalculator";
+import ConfluenceGauge from "@/components/ConfluenceGauge";
 import MTFMatrix from "@/components/MTFMatrix";
 import PivotLevels from "@/components/PivotLevels";
 import MiniEquity from "@/components/MiniEquity";
@@ -230,6 +231,7 @@ export default function Dashboard() {
         onSelect={setSymbol}
       />
       {selectedTicker && <RangePosition ticker={selectedTicker} />}
+      <ConfluenceGauge symbol={symbol} />
       <MTFMatrix symbol={symbol} />
 
       {/* ===== Mobile: tabbed single column (< lg) ===== */}

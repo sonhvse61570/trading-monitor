@@ -92,6 +92,14 @@ async def analysis_pivots(symbol: str) -> dict[str, Any]:
     return await pivot_points(symbol)
 
 
+@router.get("/api/analysis/confluence")
+async def analysis_confluence(symbol: str) -> dict[str, Any]:
+    """Composite 0-100 setup score aggregating all signal sources."""
+    from app.score import confluence_score
+
+    return await confluence_score(symbol)
+
+
 @router.get("/api/analysis/whale-heatmap")
 async def analysis_whale_heatmap(
     symbol: str,
