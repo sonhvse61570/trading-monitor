@@ -33,6 +33,7 @@ import {
   SidebarPanel,
   type SidebarTab,
 } from "@/components/dashboard";
+import Resizer, { loadWidth } from "@/components/dashboard/Resizer";
 import { subscribeWs } from "@/lib/useWsConnection";
 
 const DEFAULT_SYMBOL = "BTCUSDT";
@@ -56,9 +57,27 @@ export default function Dashboard() {
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("watchlist");
   const [mobileTab, setMobileTab] = useState<"chart" | "book" | "trade">("chart");
   const ticketSide: "LONG" | "SHORT" = "LONG";
-  // Layout prefs — chart-first by default.
+  // Layout prefs — chart-first by default. Panel widths persist.
   const [stripsOpen, setStripsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [leftW, setLeftW] = useState(240);
+  const [rightW, setRightW] = useState(260);
+  useEffect(() => {
+    setLeftW(loadWidth("tm.leftPanelW", 240));
+    setRightW(loadWidth("tm.rightPanelW", 260));
+  }, []);
+  const persistLeft = useCallback((w: number) => {
+    setLeftW(w);
+    try {
+      localStorage.setItem("tm.leftPanelW", String(Math.round(w)));
+    } catch {}
+  }, []);
+  const persistRight = useCallback((w: number) => {
+    setRightW(w);
+    try {
+      localStorage.setItem("tm.rightPanelW", String(Math.round(w)));
+    } catch {}
+  }, []);
 
   // ---- Data loading ----
   useEffect(() => {
@@ -300,20 +319,31 @@ export default function Dashboard() {
       </div>
 
       {/* ===== Desktop ===== */}
-      <div className="hidden min-h-0 flex-1 grid-cols-[240px_1fr_260px] grid-rows-[1fr_240px] gap-px bg-bg-border lg:grid">
+      <div
+        className="hidden min-h-0 flex-1 gap-px bg-bg-border lg:flex"
+        style={{ flexDirection: "row" }}
+      >
+        {/* Left sidebar + resizer */}
         {sidebarOpen ? (
-          <SidebarPanel
-            tab={sidebarTab}
-            onTabChange={setSidebarTab}
-            tickers={tickers}
-            symbol={symbol}
-            currentPrice={selectedTicker?.last_price ?? null}
-            interval={interval}
-            onSelect={setSymbol}
-          />
+          <>
+            <div className="flex min-w-0 shrink-0" style={{ width: leftW }}>
+              <div className="min-w-0 flex-1">
+                <SidebarPanel
+                  tab={sidebarTab}
+                  onTabChange={setSidebarTab}
+                  tickers={tickers}
+                  symbol={symbol}
+                  currentPrice={selectedTicker?.last_price ?? null}
+                  interval={interval}
+                  onSelect={setSymbol}
+                />
+              </div>
+              <Resizer storageKey="tm.leftPanelW" side="left" min={200} max={420} onWidth={persistLeft} />
+            </div>
+          </>
         ) : (
-          /* Collapsed rail — keeps grid geometry, frees 200px for chart */
-          <section className="row-span-2 flex min-h-0 flex-col items-center gap-3 bg-bg-panel pt-3">
+          /* Collapsed rail */
+          <section className="flex min-h-0 shrink-0 flex-col items-center gap-3 bg-bg-panel pt-3" style={{ width: 40 }}>
             <button
               onClick={() => setSidebarOpen(true)}
               title="Mở sidebar"
@@ -330,63 +360,69 @@ export default function Dashboard() {
           </section>
         )}
 
-        {/* Chart */}
-        <section className="grid min-h-0 grid-rows-[1fr_auto] bg-bg-panel">
-          <div className="min-h-0">
-            <CandleChart
-              candles={candles}
-              symbol={symbol}
-              interval={interval}
-              onIntervalChange={setIntervalState}
-            />
-          </div>
-          <IndicatorsPanel symbol={symbol} interval={interval} />
-        </section>
-
-        {/* Right column */}
-        <section className="row-span-2 grid min-h-0 grid-cols-2 grid-rows-[auto_1fr_auto] bg-bg-panel">
-          <OrderFlowStats symbol={symbol} />
-          <div className="col-span-2 grid min-h-0 grid-cols-2 gap-px bg-bg-border">
-            <div className="min-h-0 overflow-hidden bg-bg-panel">
-              <OrderBookPanel symbol={symbol} />
-            </div>
-            <div className="min-h-0 overflow-hidden bg-bg-panel">
-              <TradesTape symbol={symbol} />
-            </div>
-          </div>
-          <div className="col-span-2 max-h-[420px] overflow-y-auto border-t border-bg-border">
-            <PositionCalculator
-              symbol={symbol}
-              side={ticketSide}
-              lastPrice={selectedTicker?.last_price ?? null}
-            />
-            <OrderTicket
-              symbol={symbol}
-              lastPrice={selectedTicker?.last_price ?? null}
-              onPlaced={refreshPrivate}
-            />
-          </div>
-        </section>
-
-        {/* Bottom panel */}
-        <section className="col-start-2 grid min-h-0 grid-cols-[1fr_320px] gap-px bg-bg-border">
-          <div className="grid min-h-0 grid-rows-[1fr_auto] bg-bg-panel">
+        {/* Center column: chart + bottom panel */}
+        <div className="grid min-h-0 min-w-0 flex-1 grid-rows-[1fr_240px]">
+          {/* Chart */}
+          <section className="grid min-h-0 grid-rows-[1fr_auto] bg-bg-panel">
             <div className="min-h-0">
-              <PositionsOrders
-                positions={positions}
-                openOrders={openOrders}
-                history={history}
-                onCancelOrder={handleCancel}
-                onClosePosition={handleClosePosition}
-                busyOrderId={busyOrderId}
+              <CandleChart
+                candles={candles}
+                symbol={symbol}
+                interval={interval}
+                onIntervalChange={setIntervalState}
               />
             </div>
-            <QuickActions symbol={symbol} onDone={refreshPrivate} />
-          </div>
-          <div className="min-h-0 bg-bg-panel">
-            <SignalsFeed />
-          </div>
-        </section>
+            <IndicatorsPanel symbol={symbol} interval={interval} />
+          </section>
+
+          {/* Bottom panel */}
+          <section className="grid min-h-0 grid-cols-[1fr_320px] gap-px bg-bg-border border-t border-bg-border">
+            <div className="grid min-h-0 grid-rows-[1fr_auto] bg-bg-panel">
+              <div className="min-h-0">
+                <PositionsOrders
+                  positions={positions}
+                  openOrders={openOrders}
+                  history={history}
+                  onCancelOrder={handleCancel}
+                  onClosePosition={handleClosePosition}
+                  busyOrderId={busyOrderId}
+                />
+              </div>
+              <QuickActions symbol={symbol} onDone={refreshPrivate} />
+            </div>
+            <div className="min-h-0 bg-bg-panel">
+              <SignalsFeed />
+            </div>
+          </section>
+        </div>
+
+        {/* Right column + resizer */}
+        <div className="flex min-w-0 shrink-0" style={{ width: rightW }}>
+          <Resizer storageKey="tm.rightPanelW" side="right" min={220} max={460} onWidth={persistRight} />
+          <section className="grid min-h-0 min-w-0 flex-1 grid-cols-2 grid-rows-[auto_1fr_auto] bg-bg-panel">
+            <OrderFlowStats symbol={symbol} />
+            <div className="col-span-2 grid min-h-0 grid-cols-2 gap-px bg-bg-border">
+              <div className="min-h-0 overflow-hidden bg-bg-panel">
+                <OrderBookPanel symbol={symbol} />
+              </div>
+              <div className="min-h-0 overflow-hidden bg-bg-panel">
+                <TradesTape symbol={symbol} />
+              </div>
+            </div>
+            <div className="col-span-2 max-h-[420px] overflow-y-auto border-t border-bg-border">
+              <PositionCalculator
+                symbol={symbol}
+                side={ticketSide}
+                lastPrice={selectedTicker?.last_price ?? null}
+              />
+              <OrderTicket
+                symbol={symbol}
+                lastPrice={selectedTicker?.last_price ?? null}
+                onPlaced={refreshPrivate}
+              />
+            </div>
+          </section>
+        </div>
       </div>
     </main>
   );
