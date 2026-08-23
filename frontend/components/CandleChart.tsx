@@ -18,6 +18,13 @@ interface Zone {
   score: number;
 }
 
+interface Whale {
+  price: number;
+  notional: number;
+  side: "BUY" | "SELL";
+  time: number; // ms
+}
+
 interface Props {
   candles: Candle[];
   symbol: string;
@@ -41,6 +48,29 @@ export default function CandleChart({
   const ema21Ref = useRef<ISeriesApi<"Line"> | null>(null);
   const [zones, setZones] = useState<Zone[]>([]);
   const [showZones, setShowZones] = useState(true);
+  const [whales, setWhales] = useState<Whale[]>([]);
+  const [showWhales, setShowWhales] = useState(true);
+
+  // Fetch recent whale prints for marker overlay.
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const r = await fetch(
+          `/api/intel/smart-money?symbol=${symbol}&min_notional=50000`
+        ).then((x) => x.json());
+        if (!cancelled) setWhales(r.whales ?? []);
+      } catch {
+        /* keep old */
+      }
+    }
+    load();
+    const id = setInterval(load, 20000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [symbol]);
 
   // Fetch smart zones for the current symbol.
   useEffect(() => {
@@ -218,6 +248,40 @@ export default function CandleChart({
     }
   }, [zones, showZones, candles.length]);
 
+  // Render whale print markers on matching candles.
+  useEffect(() => {
+    const series = seriesRef.current;
+    if (!series || candles.length === 0) return;
+
+    const baseMarkers = [];
+    // Keep any existing logic simple: only whale markers are managed here.
+    if (showWhales && whales.length > 0) {
+      const candleTimes = new Set(candles.map((c) => Number(c.time)));
+      for (const w of whales.slice(0, 25)) {
+        const tSec = Math.floor(w.time / 1000);
+        // Snap to nearest existing candle within one bar.
+        let snapped: number | null = null;
+        for (const ct of candleTimes) {
+          if (Math.abs(ct - tSec) <= 900) {
+            snapped = ct;
+            break;
+          }
+        }
+        if (snapped == null) continue;
+        const big = w.notional >= 250_000;
+        baseMarkers.push({
+          time: snapped as never,
+          position: w.side === "BUY" ? ("belowBar" as const) : ("aboveBar" as const),
+          color: w.side === "BUY" ? "#0ecb81" : "#f6465d",
+          shape: w.side === "BUY" ? ("arrowUp" as const) : ("arrowDown" as const),
+          text: `${w.side === "BUY" ? "🦈B" : "🦈S"}$${Math.round(w.notional / 1000)}k`,
+          size: big ? 2 : 1,
+        });
+      }
+    }
+    series.setMarkers(baseMarkers.sort((a, b) => Number(a.time) - Number(b.time)));
+  }, [whales, showWhales, candles]);
+
   return (
     <div className="relative h-full min-h-0">
       <div className="absolute left-3 top-2 z-10 flex items-center gap-1">
@@ -246,6 +310,18 @@ export default function CandleChart({
           }`}
         >
           🧲 Zones
+        </button>
+        {/* Whales toggle */}
+        <button
+          onClick={() => setShowWhales((v) => !v)}
+          title="Whale prints overlay"
+          className={`rounded px-2 py-0.5 text-[11px] ${
+            showWhales
+              ? "bg-accent/20 font-semibold text-accent"
+              : "text-muted hover:bg-bg-hover"
+          }`}
+        >
+          🦈 Whales
         </button>
       </div>
       <div ref={containerRef} className="h-full w-full" />
