@@ -10,6 +10,7 @@ import VolatilityBadge from "@/components/VolatilityBadge";
 import type { Candle, Ticker } from "@/lib/types";
 
 const NAV = [
+  { href: "/screener", icon: "🔍", label: "Screener" },
   { href: "/analytics", icon: "📊", label: "Analytics" },
   { href: "/backtest", icon: "🧪", label: "Backtest" },
   { href: "/journal", icon: "📓", label: "Journal" },
