@@ -93,6 +93,16 @@ async def _enrich(sym: str, ticker: dict[str, Any]) -> dict[str, Any] | None:
         return None
 
 
+@router.get("/api/screener/accumulation")
+async def accumulation(
+    top: int = Query(default=15, ge=5, le=30),
+) -> dict[str, Any]:
+    """Coins whales may be quietly accumulating (Wyckoff signatures)."""
+    from app.accumulation import scan_accumulation
+
+    return await scan_accumulation(top)
+
+
 @router.get("/api/screener")
 async def screener(
     top: int = Query(default=25, ge=5, le=40),
