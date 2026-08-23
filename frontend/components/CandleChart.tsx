@@ -143,7 +143,20 @@ export default function CandleChart({
     ema9Ref.current = ema9;
     ema21Ref.current = ema21;
 
+    // Explicitly track container size so the canvas follows panel
+    // resizes (sidebar drags) even if autoSize misses them.
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      if (width > 0 && height > 0) {
+        chart.resize(Math.floor(width), Math.floor(height));
+      }
+    });
+    if (containerRef.current) ro.observe(containerRef.current);
+
     return () => {
+      ro.disconnect();
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
