@@ -293,9 +293,9 @@ export default function ScreenerPage() {
       </div>
 
       <p className="mt-3 text-center text-[11px] leading-relaxed text-muted">
-        Score = MTF + chỉ báo + whales + CVD + order book + volatility ·
-        R-Vol > 1.5 = volume spike (highlight) · Funding âm = shorts pay longs
-        (squeeze fuel) · OI↑ + giá↑ = trend healthy
+        {
+          "Score = MTF + chỉ báo + whales + CVD + order book + volatility · R-Vol > 1.5 = volume spike (highlight) · Funding âm = shorts pay longs (squeeze fuel) · OI tăng + giá tăng = trend healthy"
+        }
       </p>
     </main>
   );
