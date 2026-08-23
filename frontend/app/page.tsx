@@ -30,6 +30,7 @@ import MoversPanel from "@/components/MoversPanel";
 import AlertsPanel from "@/components/AlertsPanel";
 import FundingPanel from "@/components/FundingPanel";
 import SmartMoneyPanel from "@/components/SmartMoneyPanel";
+import WhaleHeatmap from "@/components/WhaleHeatmap";
 import MTFMatrix from "@/components/MTFMatrix";
 import PivotLevels from "@/components/PivotLevels";
 import MiniEquity from "@/components/MiniEquity";
@@ -53,7 +54,7 @@ export default function Dashboard() {
   const [busyOrderId, setBusyOrderId] = useState<number | null>(null);
   const [accountError, setAccountError] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<
-    "watchlist" | "scanner" | "movers" | "whale" | "pivots" | "alerts" | "funding"
+    "watchlist" | "scanner" | "movers" | "whale" | "heatmap" | "pivots" | "alerts" | "funding"
   >("watchlist");
   const [mobileTab, setMobileTab] = useState<"chart" | "book" | "trade">("chart");
 
@@ -332,12 +333,13 @@ export default function Dashboard() {
                 ["watchlist", "Watch"],
                 ["scanner", "Scan"],
                 ["movers", "Movers"],
+                ["heatmap", "🔥"],
                 ["whale", "🦈"],
                 ["pivots", "🎯"],
                 ["alerts", "🔔"],
                 ["funding", "💸"],
               ] as [
-                "watchlist" | "scanner" | "movers" | "whale" | "pivots" | "alerts" | "funding",
+                "watchlist" | "scanner" | "movers" | "heatmap" | "whale" | "pivots" | "alerts" | "funding",
                 string,
               ][]
             ).map(([id, label]) => (
@@ -345,15 +347,17 @@ export default function Dashboard() {
                 key={id}
                 onClick={() => setSidebarTab(id)}
                 title={
-                  id === "whale"
-                    ? "Smart money radar"
-                    : id === "pivots"
-                      ? "Pivot points"
-                      : id === "alerts"
-                        ? "Price alerts"
-                        : id === "funding"
-                          ? "Funding rates"
-                          : undefined
+                  id === "heatmap"
+                    ? "Whale footprint heatmap"
+                    : id === "whale"
+                      ? "Smart money radar"
+                      : id === "pivots"
+                        ? "Pivot points"
+                        : id === "alerts"
+                          ? "Price alerts"
+                          : id === "funding"
+                            ? "Funding rates"
+                            : undefined
                 }
                 className={`py-2 text-xs ${
                   sidebarTab === id
@@ -372,6 +376,8 @@ export default function Dashboard() {
               <ScannerPanel onSelect={setSymbol} />
             ) : sidebarTab === "movers" ? (
               <MoversPanel tickers={tickers} selected={symbol} onSelect={setSymbol} />
+            ) : sidebarTab === "heatmap" ? (
+              <WhaleHeatmap symbol={symbol} />
             ) : sidebarTab === "whale" ? (
               <SmartMoneyPanel symbol={symbol} />
             ) : sidebarTab === "pivots" ? (

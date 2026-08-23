@@ -92,6 +92,17 @@ async def analysis_pivots(symbol: str) -> dict[str, Any]:
     return await pivot_points(symbol)
 
 
+@router.get("/api/analysis/whale-heatmap")
+async def analysis_whale_heatmap(
+    symbol: str,
+    min_notional: float = Query(default=25000, ge=1000),
+) -> dict[str, Any]:
+    """Price × time heatmap of large-fill footprints."""
+    from app.heatmap import whale_heatmap
+
+    return await whale_heatmap(symbol, min_notional)
+
+
 @router.get("/api/intel/smart-money")
 async def intel_smart_money(
     symbol: str,
