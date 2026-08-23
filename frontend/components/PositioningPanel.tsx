@@ -126,8 +126,9 @@ export default function PositioningPanel({ symbol }: { symbol: string }) {
         {lsVerdict(data.ls_global, "👥 Toàn sàn")}
         {(data.ls_top_traders || data.ls_global) && (
           <p className="mt-1 text-[10px] leading-snug text-muted">
-            Top traders lệch hẳn một phía (ratio >1.5 hoặc <0.67) thường
-            là dấu hiệu smart money đã đặt cược — theo hoặc cảnh giác squeeze.
+            {
+              "Top traders lệch hẳn một phía (ratio > 1.5 hoặc < 0.67) thường là dấu hiệu smart money đã đặt cược — theo hoặc cảnh giác squeeze."
+            }
           </p>
         )}
       </div>
