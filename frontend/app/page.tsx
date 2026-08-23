@@ -56,6 +56,9 @@ export default function Dashboard() {
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("watchlist");
   const [mobileTab, setMobileTab] = useState<"chart" | "book" | "trade">("chart");
   const ticketSide: "LONG" | "SHORT" = "LONG";
+  // Layout prefs — chart-first by default.
+  const [stripsOpen, setStripsOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // ---- Data loading ----
   useEffect(() => {
@@ -153,11 +156,46 @@ export default function Dashboard() {
 
       <Toasts />
 
+      {/* Control row — layout toggles */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-bg-border bg-bg-panel px-3 py-1">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-muted">
+          Bảng điều khiển
+        </span>
+        <div className="ml-auto flex items-center gap-1">
+          <button
+            onClick={() => setStripsOpen((v) => !v)}
+            className={`rounded px-2 py-0.5 text-[11px] ${
+              stripsOpen
+                ? "bg-accent/20 font-semibold text-accent"
+                : "text-muted hover:bg-bg-hover hover:text-white"
+            }`}
+            title="Bot / Risk / Sự kiện / Tin tức"
+          >
+            🧰 {stripsOpen ? "Thu gọn công cụ" : "Công cụ thị trường"}
+          </button>
+          <button
+            onClick={() => setSidebarOpen((v) => !v)}
+            className={`hidden rounded px-2 py-0.5 text-[11px] lg:inline-block ${
+              sidebarOpen
+                ? "text-muted hover:bg-bg-hover hover:text-white"
+                : "bg-accent/20 font-semibold text-accent"
+            }`}
+            title="Ẩn/hiện sidebar phân tích"
+          >
+            {sidebarOpen ? "◀ Ẩn sidebar" : "▶ Sidebar"}
+          </button>
+        </div>
+      </div>
+
       <AccountBar account={accountError ? null : account} />
-      <AutoTradePanel />
-      <RiskPanel />
-      <UpcomingEvents />
-      <NewsTicker />
+      {stripsOpen && (
+        <>
+          <AutoTradePanel />
+          <RiskPanel />
+          <UpcomingEvents />
+          <NewsTicker />
+        </>
+      )}
       <MarketOverview tickers={tickers} selected={symbol} onSelect={setSymbol} />
       {selectedTicker && <RangePosition ticker={selectedTicker} />}
 
@@ -263,15 +301,34 @@ export default function Dashboard() {
 
       {/* ===== Desktop ===== */}
       <div className="hidden min-h-0 flex-1 grid-cols-[240px_1fr_260px] grid-rows-[1fr_240px] gap-px bg-bg-border lg:grid">
-        <SidebarPanel
-          tab={sidebarTab}
-          onTabChange={setSidebarTab}
-          tickers={tickers}
-          symbol={symbol}
-          currentPrice={selectedTicker?.last_price ?? null}
-          interval={interval}
-          onSelect={setSymbol}
-        />
+        {sidebarOpen ? (
+          <SidebarPanel
+            tab={sidebarTab}
+            onTabChange={setSidebarTab}
+            tickers={tickers}
+            symbol={symbol}
+            currentPrice={selectedTicker?.last_price ?? null}
+            interval={interval}
+            onSelect={setSymbol}
+          />
+        ) : (
+          /* Collapsed rail — keeps grid geometry, frees 200px for chart */
+          <section className="row-span-2 flex min-h-0 flex-col items-center gap-3 bg-bg-panel pt-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              title="Mở sidebar"
+              className="rounded border border-bg-border px-1.5 py-2 text-xs text-muted hover:border-accent hover:text-accent"
+            >
+              ▶
+            </button>
+            <span
+              className="mt-2 text-[10px] font-medium uppercase tracking-widest text-muted"
+              style={{ writingMode: "vertical-rl" }}
+            >
+              Phân tích
+            </span>
+          </section>
+        )}
 
         {/* Chart */}
         <section className="grid min-h-0 grid-rows-[1fr_auto] bg-bg-panel">
