@@ -1,7 +1,8 @@
 "use client";
 
 // Candlestick chart built on TradingView Lightweight Charts.
-import { useEffect, useRef } from "react";
+// Optional smart S/R zones overlay (fetched from /api/analysis/zones).
+import { useEffect, useRef, useState } from "react";
 import {
   createChart,
   ColorType,
@@ -10,6 +11,12 @@ import {
   type ISeriesApi,
 } from "lightweight-charts";
 import type { Candle } from "@/lib/types";
+
+interface Zone {
+  mid: number;
+  side: "support" | "resistance";
+  score: number;
+}
 
 interface Props {
   candles: Candle[];
@@ -32,6 +39,29 @@ export default function CandleChart({
   const volumeRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const ema9Ref = useRef<ISeriesApi<"Line"> | null>(null);
   const ema21Ref = useRef<ISeriesApi<"Line"> | null>(null);
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [showZones, setShowZones] = useState(true);
+
+  // Fetch smart zones for the current symbol.
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const r = await fetch(
+          `/api/analysis/zones?symbol=${symbol}&interval=1h`
+        ).then((x) => x.json());
+        if (!cancelled) setZones(r.zones ?? []);
+      } catch {
+        /* keep old */
+      }
+    }
+    load();
+    const id = setInterval(load, 120000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [symbol]);
 
   // Create chart once
   useEffect(() => {
@@ -142,6 +172,52 @@ export default function CandleChart({
     chartRef.current?.timeScale().fitContent();
   }, [candles]);
 
+  // Render S/R zone price lines (recreated when zones or toggle change).
+  useEffect(() => {
+    const series = seriesRef.current;
+    if (!series) return;
+
+    // Clear previous zone lines by resetting all price lines via createPriceLine
+    // tracking. Lightweight-charts has no bulk API, so we keep refs.
+    return () => undefined;
+  }, []);
+
+  const zoneLinesRef = useRef<
+    ReturnType<ISeriesApi<"Candlestick">["createPriceLine"]>[]
+  >([]);
+
+  useEffect(() => {
+    const series = seriesRef.current;
+    if (!series) return;
+
+    // Remove old lines.
+    for (const line of zoneLinesRef.current) {
+      try {
+        series.removePriceLine(line);
+      } catch {
+        /* already removed */
+      }
+    }
+    zoneLinesRef.current = [];
+
+    if (!showZones) return;
+
+    // Add new lines — top 6 strongest zones only to avoid clutter.
+    for (const z of [...zones].sort((a, b) => b.score - a.score).slice(0, 6)) {
+      const isSup = z.side === "support";
+      const strong = z.score >= 70;
+      const line = series.createPriceLine({
+        price: z.mid,
+        color: isSup ? "#0ecb81" : "#f6465d",
+        lineWidth: strong ? 2 : 1,
+        lineStyle: strong ? LineStyle.Solid : LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: `${isSup ? "SUP" : "RES"} ${z.score}`,
+      });
+      zoneLinesRef.current.push(line);
+    }
+  }, [zones, showZones, candles.length]);
+
   return (
     <div className="relative h-full min-h-0">
       <div className="absolute left-3 top-2 z-10 flex items-center gap-1">
@@ -159,6 +235,18 @@ export default function CandleChart({
             {iv}
           </button>
         ))}
+        {/* Zones toggle */}
+        <button
+          onClick={() => setShowZones((v) => !v)}
+          title="Smart S/R zones overlay"
+          className={`ml-2 rounded px-2 py-0.5 text-[11px] ${
+            showZones
+              ? "bg-accent/20 font-semibold text-accent"
+              : "text-muted hover:bg-bg-hover"
+          }`}
+        >
+          🧲 Zones
+        </button>
       </div>
       <div ref={containerRef} className="h-full w-full" />
     </div>
