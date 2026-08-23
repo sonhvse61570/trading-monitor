@@ -55,10 +55,11 @@ export default function Resizer({
     <div
       onMouseDown={onMouseDown}
       title="Kéo để đổi độ rộng"
-      className={`group relative z-20 w-1 shrink-0 cursor-col-resize bg-bg-border transition-colors hover:bg-accent/60 ${
-        side === "left" ? "order-2" : "order-1"
-      }`}
-    />
+      className="relative z-20 w-1 shrink-0 cursor-col-resize bg-bg-border transition-colors hover:bg-accent/60"
+    >
+      {/* Wider invisible hit area for easier grabbing */}
+      <div className="absolute inset-y-0 -left-2 -right-2" />
+    </div>
   );
 }
 
