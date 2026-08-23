@@ -31,6 +31,7 @@ import AlertsPanel from "@/components/AlertsPanel";
 import FundingPanel from "@/components/FundingPanel";
 import SmartMoneyPanel from "@/components/SmartMoneyPanel";
 import WhaleHeatmap from "@/components/WhaleHeatmap";
+import PositionCalculator from "@/components/PositionCalculator";
 import MTFMatrix from "@/components/MTFMatrix";
 import PivotLevels from "@/components/PivotLevels";
 import MiniEquity from "@/components/MiniEquity";
@@ -57,6 +58,8 @@ export default function Dashboard() {
     "watchlist" | "scanner" | "movers" | "whale" | "heatmap" | "pivots" | "alerts" | "funding"
   >("watchlist");
   const [mobileTab, setMobileTab] = useState<"chart" | "book" | "trade">("chart");
+  // Calculator mirrors the ticket's active side (BUY → LONG).
+  const ticketSide: "LONG" | "SHORT" = "LONG";
 
   // Initial tickers snapshot
   useEffect(() => {
@@ -302,7 +305,12 @@ export default function Dashboard() {
 
         {mobileTab === "trade" && (
           <>
-            <section className="max-h-[45%] shrink-0 overflow-y-auto border-b border-bg-border bg-bg-panel">
+            <section className="max-h-[50%] shrink-0 overflow-y-auto border-b border-bg-border bg-bg-panel">
+              <PositionCalculator
+                symbol={symbol}
+                side={ticketSide}
+                lastPrice={selectedTicker?.last_price ?? null}
+              />
               <OrderTicket
                 symbol={symbol}
                 lastPrice={selectedTicker?.last_price ?? null}
@@ -418,7 +426,12 @@ export default function Dashboard() {
               <TradesTape symbol={symbol} />
             </div>
           </div>
-          <div className="col-span-2 max-h-[340px] overflow-y-auto border-t border-bg-border">
+          <div className="col-span-2 max-h-[420px] overflow-y-auto border-t border-bg-border">
+            <PositionCalculator
+              symbol={symbol}
+              side={ticketSide}
+              lastPrice={selectedTicker?.last_price ?? null}
+            />
             <OrderTicket
               symbol={symbol}
               lastPrice={selectedTicker?.last_price ?? null}
