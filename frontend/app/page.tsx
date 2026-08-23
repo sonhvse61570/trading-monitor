@@ -233,9 +233,6 @@ export default function Dashboard() {
         onSelect={setSymbol}
       />
       {selectedTicker && <RangePosition ticker={selectedTicker} />}
-      <ConfluenceGauge symbol={symbol} />
-      <MTFMatrix symbol={symbol} />
-      <TradeSetupCard symbol={symbol} />
 
       {/* ===== Mobile: tabbed single column (< lg) ===== */}
       <div className="flex min-h-0 flex-1 flex-col gap-px bg-bg-border lg:hidden">
@@ -272,6 +269,9 @@ export default function Dashboard() {
               />
             </section>
             <IndicatorsPanel symbol={symbol} interval={interval} />
+            <ConfluenceGauge symbol={symbol} />
+            <MTFMatrix symbol={symbol} />
+            <TradeSetupCard symbol={symbol} />
             <section className="min-h-0 flex-1 bg-bg-panel">
               {sidebarTab === "watchlist" ? (
                 <Watchlist tickers={tickers} selected={symbol} onSelect={setSymbol} />
@@ -409,6 +409,16 @@ export default function Dashboard() {
               <FundingPanel onSelect={setSymbol} />
             )}
           </div>
+
+          {/* Analysis stack — bottom half of sidebar */}
+          <div className="grid shrink-0 grid-rows-[auto_auto_auto] border-t border-bg-border">
+            <ConfluenceGauge symbol={symbol} />
+            <MTFMatrix symbol={symbol} />
+            <div className="max-h-[190px] overflow-y-auto">
+              <TradeSetupCard symbol={symbol} />
+            </div>
+          </div>
+
           <MiniEquity />
         </section>
 
