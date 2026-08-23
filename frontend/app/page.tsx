@@ -397,9 +397,9 @@ export default function Dashboard() {
         </div>
 
         {/* Right column + resizer */}
-        <div className="flex min-w-0 shrink-0" style={{ width: rightW }}>
+        <div className="flex min-w-0 shrink-0 overflow-hidden" style={{ width: rightW }}>
           <Resizer storageKey="tm.rightPanelW" side="right" min={220} max={460} onWidth={persistRight} />
-          <section className="grid min-h-0 min-w-0 flex-1 grid-cols-2 grid-rows-[auto_1fr_auto] bg-bg-panel">
+          <section className="grid min-h-0 w-full min-w-0 grid-cols-2 grid-rows-[auto_1fr_auto] bg-bg-panel">
             <OrderFlowStats symbol={symbol} />
             <div className="col-span-2 grid min-h-0 grid-cols-2 gap-px bg-bg-border">
               <div className="min-h-0 overflow-hidden bg-bg-panel">
