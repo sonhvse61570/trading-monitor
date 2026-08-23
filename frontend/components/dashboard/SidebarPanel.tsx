@@ -12,6 +12,7 @@ import AlertsPanel from "@/components/AlertsPanel";
 import FundingPanel from "@/components/FundingPanel";
 import LiquidationMap from "@/components/LiquidationMap";
 import CorrelationMatrix from "@/components/CorrelationMatrix";
+import VolumeProfile from "@/components/VolumeProfile";
 import ConfluenceGauge from "@/components/ConfluenceGauge";
 import MTFMatrix from "@/components/MTFMatrix";
 import TradeSetupCard from "@/components/TradeSetupCard";
@@ -26,6 +27,7 @@ export type SidebarTab =
   | "whale"
   | "positioning"
   | "liquidations"
+  | "vprofile"
   | "correlation"
   | "pivots"
   | "alerts"
@@ -39,6 +41,7 @@ const TABS: [SidebarTab, string, string | undefined][] = [
   ["whale", "🦈", "Smart money radar"],
   ["positioning", "📊", "Open interest & L/S ratios"],
   ["liquidations", "💥", "Liquidation clusters (est.)"],
+  ["vprofile", "📈", "Volume profile & POC"],
   ["correlation", "🔗", "Correlation matrix"],
   ["pivots", "🎯", "Pivot points"],
   ["alerts", "🔔", "Price alerts"],
@@ -51,6 +54,7 @@ export default function SidebarPanel({
   tickers,
   symbol,
   currentPrice,
+  interval,
   onSelect,
 }: {
   tab: SidebarTab;
@@ -58,6 +62,7 @@ export default function SidebarPanel({
   tickers: Ticker[];
   symbol: string;
   currentPrice: number | null;
+  interval?: string;
   onSelect: (s: string) => void;
 }) {
   return (
@@ -93,6 +98,7 @@ export default function SidebarPanel({
         {tab === "whale" && <SmartMoneyPanel symbol={symbol} />}
         {tab === "positioning" && <PositioningPanel symbol={symbol} />}
         {tab === "liquidations" && <LiquidationMap symbol={symbol} />}
+        {tab === "vprofile" && <VolumeProfile symbol={symbol} interval={interval ?? "15m"} />}
         {tab === "correlation" && <CorrelationMatrix />}
         {tab === "pivots" && (
           <PivotLevels symbol={symbol} currentPrice={currentPrice} />

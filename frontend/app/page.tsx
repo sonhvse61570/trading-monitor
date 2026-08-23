@@ -269,6 +269,7 @@ export default function Dashboard() {
           tickers={tickers}
           symbol={symbol}
           currentPrice={selectedTicker?.last_price ?? null}
+          interval={interval}
           onSelect={setSymbol}
         />
 

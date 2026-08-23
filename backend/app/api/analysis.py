@@ -52,6 +52,17 @@ async def confluence(symbol: str) -> dict[str, Any]:
     return await confluence_score(symbol)
 
 
+@router.get("/volume-profile")
+async def vp(
+    symbol: str,
+    interval: str = Query(default="15m"),
+) -> dict[str, Any]:
+    """Volume-by-price profile with POC and 70% value area."""
+    from app.volume_profile import volume_profile
+
+    return await volume_profile(symbol, interval)
+
+
 @router.get("/liquidations")
 async def liquidations(symbol: str) -> dict[str, Any]:
     """Estimated liquidation clusters (heuristic from large-flow)."""
