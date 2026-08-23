@@ -27,6 +27,7 @@ interface AccRow {
   price: number;
   change_pct: number;
   score: number;
+  assessment?: string;
   oi_change_6h_pct: number | null;
   rel_volume: number | null;
   range_3h_pct: number | null;
@@ -393,10 +394,11 @@ export default function ScreenerPage() {
               {accRows.map((r, i) => (
                 <tr
                   key={r.symbol}
+                  title={r.assessment}
                   className="border-b border-bg-border/40 font-mono text-xs hover:bg-bg-hover/50"
                 >
                   <td className="px-3 py-2 text-muted">{i + 1}</td>
-                  <td className="px-3 py-2 font-sans font-semibold">
+                  <td className="px-3 py-2 font-sans font-semibold underline decoration-dotted decoration-accent/50 underline-offset-4">
                     {r.symbol.replace("USDT", "")}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">

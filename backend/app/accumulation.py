@@ -127,11 +127,41 @@ async def _scan_one(sym: str, ticker: dict[str, Any]) -> dict[str, Any] | None:
         if score < 35:
             return None  # not interesting
 
+        # --- Narrative assessment (hover tooltip) --- #
+        parts: list[str] = []
+        if div_pts >= 15:
+            parts.append(
+                f"CVD tăng {abs(round(cvd_mom * 100))}% so với kỳ trước trong khi giá chỉ "
+                f"di chuyển {round(price_chg * 100, 2)}% — có lực mua ngầm hấp thụ hàng bán."
+            )
+        elif div_pts > 0:
+            parts.append("Có tín hiệu hấp thụ nhẹ từ dòng tiền taker.")
+        if oi_pts >= 10:
+            parts.append(f"Open Interest đang xây dựng ({oi_chg:+.1f}%/6h) — vị thế mới liên tục được mở.")
+        if vol_pts >= 10:
+            parts.append(
+                f"Volume gấp {rel_vol:.1f}x trung bình nhưng range 3h chỉ {range_pct * 100:.1f}% "
+                "— hoạt động dồn nén trong vùng giá hẹp."
+            )
+        if whale_pts >= 10:
+            side = "mua" if (whale_net or 0) >= 0 else "bán"
+            parts.append(f"Lệnh cá mập (≥$20k) nghiêng về {side}: net ${abs(whale_net or 0) / 1000:.0f}k.")
+        if fund_pts >= 10:
+            parts.append("Funding còn lạnh — đám đông chưa phát hiện, setup vẫn 'stealth'.")
+        elif funding is not None and funding > 0.05:
+            parts.append("⚠️ Funding đã nóng — khả năng stealth phase đã kết thúc.")
+
+        verdict = (
+            f"ĐÁNH GIÁ {sym.replace('USDT', '')} (điểm tích lũy {score}/100): "
+            + (" ".join(parts) if parts else "Chưa đủ dấu hiệu rõ ràng.")
+        )
+
         return {
             "symbol": sym,
             "price": ticker["last_price"],
             "change_pct": ticker["change_pct"],
             "score": score,
+            "assessment": verdict,
             "cvd_momentum": round(cvd_mom, 3),
             "price_change_3h_pct": round(price_chg * 100, 2),
             "oi_change_6h_pct": oi_chg,
