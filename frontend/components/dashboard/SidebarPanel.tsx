@@ -10,6 +10,8 @@ import PositioningPanel from "@/components/PositioningPanel";
 import PivotLevels from "@/components/PivotLevels";
 import AlertsPanel from "@/components/AlertsPanel";
 import FundingPanel from "@/components/FundingPanel";
+import LiquidationMap from "@/components/LiquidationMap";
+import CorrelationMatrix from "@/components/CorrelationMatrix";
 import ConfluenceGauge from "@/components/ConfluenceGauge";
 import MTFMatrix from "@/components/MTFMatrix";
 import TradeSetupCard from "@/components/TradeSetupCard";
@@ -23,6 +25,8 @@ export type SidebarTab =
   | "heatmap"
   | "whale"
   | "positioning"
+  | "liquidations"
+  | "correlation"
   | "pivots"
   | "alerts"
   | "funding";
@@ -34,6 +38,8 @@ const TABS: [SidebarTab, string, string | undefined][] = [
   ["heatmap", "🔥", "Whale footprint heatmap"],
   ["whale", "🦈", "Smart money radar"],
   ["positioning", "📊", "Open interest & L/S ratios"],
+  ["liquidations", "💥", "Liquidation clusters (est.)"],
+  ["correlation", "🔗", "Correlation matrix"],
   ["pivots", "🎯", "Pivot points"],
   ["alerts", "🔔", "Price alerts"],
   ["funding", "💸", "Funding rates"],
@@ -86,6 +92,8 @@ export default function SidebarPanel({
         {tab === "heatmap" && <WhaleHeatmap symbol={symbol} />}
         {tab === "whale" && <SmartMoneyPanel symbol={symbol} />}
         {tab === "positioning" && <PositioningPanel symbol={symbol} />}
+        {tab === "liquidations" && <LiquidationMap symbol={symbol} />}
+        {tab === "correlation" && <CorrelationMatrix />}
         {tab === "pivots" && (
           <PivotLevels symbol={symbol} currentPrice={currentPrice} />
         )}

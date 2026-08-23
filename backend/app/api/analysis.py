@@ -52,6 +52,22 @@ async def confluence(symbol: str) -> dict[str, Any]:
     return await confluence_score(symbol)
 
 
+@router.get("/liquidations")
+async def liquidations(symbol: str) -> dict[str, Any]:
+    """Estimated liquidation clusters (heuristic from large-flow)."""
+    from app.liquidations import liquidation_clusters
+
+    return await liquidation_clusters(symbol)
+
+
+@router.get("/correlation")
+async def correlation() -> dict[str, Any]:
+    """Pearson correlation matrix of hourly returns, majors."""
+    from app.liquidations import correlation_matrix
+
+    return await correlation_matrix()
+
+
 @router.get("/whale-heatmap")
 async def whale_heatmap(
     symbol: str,
