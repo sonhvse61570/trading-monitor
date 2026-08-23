@@ -100,6 +100,14 @@ async def analysis_positioning(symbol: str) -> dict[str, Any]:
     return await positioning(symbol)
 
 
+@router.get("/api/analysis/setup")
+async def analysis_setup(symbol: str) -> dict[str, Any]:
+    """Actionable trade plan(s) generated from live signals."""
+    from app.setup import generate_setup
+
+    return await generate_setup(symbol)
+
+
 @router.get("/api/analysis/confluence")
 async def analysis_confluence(symbol: str) -> dict[str, Any]:
     """Composite 0-100 setup score aggregating all signal sources."""

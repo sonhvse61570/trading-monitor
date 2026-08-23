@@ -33,6 +33,7 @@ import SmartMoneyPanel from "@/components/SmartMoneyPanel";
 import WhaleHeatmap from "@/components/WhaleHeatmap";
 import PositionCalculator from "@/components/PositionCalculator";
 import ConfluenceGauge from "@/components/ConfluenceGauge";
+import TradeSetupCard from "@/components/TradeSetupCard";
 import PositioningPanel from "@/components/PositioningPanel";
 import MTFMatrix from "@/components/MTFMatrix";
 import PivotLevels from "@/components/PivotLevels";
@@ -234,6 +235,7 @@ export default function Dashboard() {
       {selectedTicker && <RangePosition ticker={selectedTicker} />}
       <ConfluenceGauge symbol={symbol} />
       <MTFMatrix symbol={symbol} />
+      <TradeSetupCard symbol={symbol} />
 
       {/* ===== Mobile: tabbed single column (< lg) ===== */}
       <div className="flex min-h-0 flex-1 flex-col gap-px bg-bg-border lg:hidden">
