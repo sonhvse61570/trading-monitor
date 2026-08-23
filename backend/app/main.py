@@ -7,6 +7,7 @@ import logging
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api import api_router
 from app.config import settings
 from app.routes import router
 from app.routes_phase2 import router as router_phase2, _tick_alert_checks
@@ -27,6 +28,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(api_router)  # domain routers: analysis + intel
 app.include_router(router)
 app.include_router(router_phase2)
 app.include_router(router_phase3)

@@ -1,4 +1,9 @@
-"""Phase 3 routes: multi-venue market data + backtesting."""
+"""Core market-data & research routes.
+
+Multi-venue tickers/klines, strategy optimization, walk-forward
+validation and the backtest engine endpoint. Analysis/intel domains
+live in app/api/*.
+"""
 from __future__ import annotations
 
 import logging
@@ -43,99 +48,6 @@ async def klines_multi(
         raise HTTPException(404, str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(502, f"Exchange error: {exc}") from exc
-
-
-# --------------------------------------------------------------------- #
-# Market intelligence                                                    #
-# --------------------------------------------------------------------- #
-
-
-@router.get("/api/intel/news")
-async def intel_news(limit: int = Query(default=20, ge=1, le=50)) -> list[dict[str, Any]]:
-    """Latest crypto headlines (CoinDesk + Cointelegraph RSS, cached 5m)."""
-    from app.market_intel import fetch_news
-
-    return await fetch_news(limit)
-
-
-@router.get("/api/intel/calendar")
-async def intel_calendar(
-    impact: str = Query(default="high", pattern="^(low|medium|high)$"),
-) -> list[dict[str, Any]]:
-    """This week's economic calendar (ForexFactory, cached 30m)."""
-    from app.market_intel import fetch_calendar
-
-    return await fetch_calendar(impact)
-
-
-@router.get("/api/intel/fear-greed")
-async def intel_fear_greed() -> dict[str, Any]:
-    """Crypto Fear & Greed Index (alternative.me, cached 10m)."""
-    from app.market_intel import fetch_fear_greed
-
-    return await fetch_fear_greed()
-
-
-@router.get("/api/analysis/mtf")
-async def analysis_mtf(symbol: str) -> dict[str, Any]:
-    """Multi-timeframe trend matrix (5m→4h)."""
-    from app.mtf import mtf_trend
-
-    return await mtf_trend(symbol)
-
-
-@router.get("/api/analysis/pivots")
-async def analysis_pivots(symbol: str) -> dict[str, Any]:
-    """Classic pivot points from the last completed daily candle."""
-    from app.mtf import pivot_points
-
-    return await pivot_points(symbol)
-
-
-@router.get("/api/analysis/positioning")
-async def analysis_positioning(symbol: str) -> dict[str, Any]:
-    """Open interest + long/short ratios (Binance Futures public)."""
-    from app.derivatives import positioning
-
-    return await positioning(symbol)
-
-
-@router.get("/api/analysis/setup")
-async def analysis_setup(symbol: str) -> dict[str, Any]:
-    """Actionable trade plan(s) generated from live signals."""
-    from app.setup import generate_setup
-
-    return await generate_setup(symbol)
-
-
-@router.get("/api/analysis/confluence")
-async def analysis_confluence(symbol: str) -> dict[str, Any]:
-    """Composite 0-100 setup score aggregating all signal sources."""
-    from app.score import confluence_score
-
-    return await confluence_score(symbol)
-
-
-@router.get("/api/analysis/whale-heatmap")
-async def analysis_whale_heatmap(
-    symbol: str,
-    min_notional: float = Query(default=25000, ge=1000),
-) -> dict[str, Any]:
-    """Price × time heatmap of large-fill footprints."""
-    from app.heatmap import whale_heatmap
-
-    return await whale_heatmap(symbol, min_notional)
-
-
-@router.get("/api/intel/smart-money")
-async def intel_smart_money(
-    symbol: str,
-    min_notional: float = Query(default=50000, ge=1000),
-) -> dict[str, Any]:
-    """Whale prints + CVD + order-book walls for one symbol."""
-    from app.whale import smart_money
-
-    return await smart_money(symbol, min_notional)
 
 
 @router.get("/api/walkforward")

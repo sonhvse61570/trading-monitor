@@ -1,0 +1,63 @@
+"""Analysis domain — derived market analytics endpoints.
+
+MTF trends, pivot points, derivatives positioning, confluence score,
+trade setups, whale heatmap.
+"""
+from __future__ import annotations
+
+from typing import Any
+
+from fastapi import APIRouter, Query
+
+router = APIRouter(prefix="/api/analysis", tags=["analysis"])
+
+
+@router.get("/mtf")
+async def mtf(symbol: str) -> dict[str, Any]:
+    """Multi-timeframe trend matrix (5m→4h)."""
+    from app.mtf import mtf_trend
+
+    return await mtf_trend(symbol)
+
+
+@router.get("/pivots")
+async def pivots(symbol: str) -> dict[str, Any]:
+    """Classic pivot points from the last completed daily candle."""
+    from app.mtf import pivot_points
+
+    return await pivot_points(symbol)
+
+
+@router.get("/positioning")
+async def positioning(symbol: str) -> dict[str, Any]:
+    """Open interest + long/short ratios (Binance Futures public)."""
+    from app.derivatives import positioning
+
+    return await positioning(symbol)
+
+
+@router.get("/setup")
+async def setup(symbol: str) -> dict[str, Any]:
+    """Actionable trade plan(s) generated from live signals."""
+    from app.setup import generate_setup
+
+    return await generate_setup(symbol)
+
+
+@router.get("/confluence")
+async def confluence(symbol: str) -> dict[str, Any]:
+    """Composite 0-100 setup score aggregating all signal sources."""
+    from app.score import confluence_score
+
+    return await confluence_score(symbol)
+
+
+@router.get("/whale-heatmap")
+async def whale_heatmap(
+    symbol: str,
+    min_notional: float = Query(default=25000, ge=1000),
+) -> dict[str, Any]:
+    """Price × time heatmap of large-fill footprints."""
+    from app.heatmap import whale_heatmap
+
+    return await whale_heatmap(symbol, min_notional)

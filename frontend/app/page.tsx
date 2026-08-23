@@ -1,78 +1,69 @@
 "use client";
 
-// Main dashboard — assembles all panels.
-// Responsive: mobile = tabbed single column; desktop (lg+) = terminal grid.
+// Main dashboard — composes header, sidebar, chart, order column, bottom.
+// Data fetching & actions live here; presentation in components/dashboard/*.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useLiveTickers } from "@/lib/useLiveTickers";
 import { useLiveCandles } from "@/lib/useLiveCandles";
 import type { AccountInfo, Candle, Order, Position, Ticker } from "@/lib/types";
-import Link from "next/link";
-import Watchlist, { formatPrice } from "@/components/Watchlist";
+import Watchlist from "@/components/Watchlist";
+import ScannerPanel from "@/components/ScannerPanel";
 import CandleChart from "@/components/CandleChart";
 import OrderBookPanel from "@/components/OrderBookPanel";
 import OrderTicket from "@/components/OrderTicket";
 import AccountBar from "@/components/AccountBar";
 import PositionsOrders from "@/components/PositionsOrders";
-import ScannerPanel from "@/components/ScannerPanel";
 import SignalsFeed from "@/components/SignalsFeed";
 import RiskPanel from "@/components/RiskPanel";
 import AutoTradePanel from "@/components/AutoTradePanel";
 import TradesTape from "@/components/TradesTape";
-import ConnectionStatus from "@/components/ConnectionStatus";
 import Toasts, { pushSignalToast } from "@/components/Toasts";
-import { subscribeWs } from "@/lib/useWsConnection";
 import NewsTicker from "@/components/NewsTicker";
-import FearGreedBadge from "@/components/FearGreedBadge";
 import UpcomingEvents from "@/components/UpcomingEvents";
 import MarketOverview from "@/components/MarketOverview";
-import MoversPanel from "@/components/MoversPanel";
-import AlertsPanel from "@/components/AlertsPanel";
-import FundingPanel from "@/components/FundingPanel";
-import SmartMoneyPanel from "@/components/SmartMoneyPanel";
-import WhaleHeatmap from "@/components/WhaleHeatmap";
 import PositionCalculator from "@/components/PositionCalculator";
-import ConfluenceGauge from "@/components/ConfluenceGauge";
-import TradeSetupCard from "@/components/TradeSetupCard";
-import PositioningPanel from "@/components/PositioningPanel";
-import MTFMatrix from "@/components/MTFMatrix";
-import PivotLevels from "@/components/PivotLevels";
-import MiniEquity from "@/components/MiniEquity";
-import QuickActions from "@/components/QuickActions";
 import IndicatorsPanel from "@/components/IndicatorsPanel";
-import CandleCountdown from "@/components/CandleCountdown";
 import RangePosition from "@/components/RangePosition";
 import OrderFlowStats from "@/components/OrderFlowStats";
-import VolatilityBadge from "@/components/VolatilityBadge";
+import QuickActions from "@/components/QuickActions";
+import ConfluenceGauge from "@/components/ConfluenceGauge";
+import {
+  DashboardHeader,
+  SidebarPanel,
+  type SidebarTab,
+} from "@/components/dashboard";
+import { subscribeWs } from "@/lib/useWsConnection";
 
 const DEFAULT_SYMBOL = "BTCUSDT";
 
 export default function Dashboard() {
+  // ---- Market data state ----
   const [snapshot, setSnapshot] = useState<Ticker[]>([]);
   const [symbol, setSymbol] = useState(DEFAULT_SYMBOL);
   const [interval, setIntervalState] = useState("15m");
+  const [snapshotCandles, setSnapshotCandles] = useState<Candle[]>([]);
+
+  // ---- Private data state ----
   const [account, setAccount] = useState<AccountInfo | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
   const [openOrders, setOpenOrders] = useState<Order[]>([]);
   const [history, setHistory] = useState<Order[]>([]);
   const [busyOrderId, setBusyOrderId] = useState<number | null>(null);
   const [accountError, setAccountError] = useState<string | null>(null);
-  const [sidebarTab, setSidebarTab] = useState<
-    "watchlist" | "scanner" | "movers" | "whale" | "heatmap" | "positioning" | "pivots" | "alerts" | "funding"
-  >("watchlist");
+
+  // ---- UI state ----
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>("watchlist");
   const [mobileTab, setMobileTab] = useState<"chart" | "book" | "trade">("chart");
-  // Calculator mirrors the ticket's active side (BUY → LONG).
   const ticketSide: "LONG" | "SHORT" = "LONG";
 
-  // Initial tickers snapshot
+  // ---- Data loading ----
   useEffect(() => {
     api.tickers().then(setSnapshot).catch(() => setSnapshot([]));
   }, []);
 
   const tickers = useLiveTickers(snapshot);
 
-  // Candles on symbol/interval change (REST snapshot)
-  const [snapshotCandles, setSnapshotCandles] = useState<Candle[]>([]);
   useEffect(() => {
     let cancelled = false;
     setSnapshotCandles([]);
@@ -85,10 +76,8 @@ export default function Dashboard() {
     };
   }, [symbol, interval]);
 
-  // Merge live WS candle updates on top of the snapshot
   const candles = useLiveCandles(snapshotCandles, symbol, interval);
 
-  // Poll private data every 5s (works without keys too — shows error state)
   const refreshPrivate = useCallback(async () => {
     try {
       const [acc, pos, oo, hist] = await Promise.all([
@@ -113,7 +102,6 @@ export default function Dashboard() {
     return () => clearInterval(id);
   }, [refreshPrivate]);
 
-  // Signal toasts via shared WS connection
   useEffect(() => {
     return subscribeWs((msg) => {
       if (msg.type === "signal") pushSignalToast(msg.data as never);
@@ -125,7 +113,7 @@ export default function Dashboard() {
     [tickers, symbol]
   );
 
-  // Actions
+  // ---- Actions ----
   async function handleCancel(orderId: number, sym: string) {
     setBusyOrderId(orderId);
     try {
@@ -157,68 +145,11 @@ export default function Dashboard() {
 
   return (
     <main className="flex h-screen flex-col overflow-hidden">
-      {/* Header */}
-      <header className="flex items-center justify-between gap-2 border-b border-bg-border bg-bg-panel px-3 py-2 sm:px-4">
-        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          <h1 className="truncate text-sm font-bold tracking-wide">
-            📈<span className="ml-1 hidden sm:inline">TRADING MONITOR</span>
-            <span className="ml-1 hidden rounded bg-accent/15 px-1.5 py-0.5 text-[10px] font-medium text-accent md:inline">
-              Binance USD-M Futures
-            </span>
-          </h1>
-          <Link
-            href="/analytics"
-            className="rounded border border-bg-border px-2 py-1 text-xs text-muted hover:border-accent hover:text-accent"
-          >
-            📊<span className="ml-1 hidden sm:inline">Analytics</span>
-          </Link>
-          <Link
-            href="/backtest"
-            className="rounded border border-bg-border px-2 py-1 text-xs text-muted hover:border-accent hover:text-accent"
-          >
-            🧪<span className="ml-1 hidden sm:inline">Backtest</span>
-          </Link>
-          <Link
-            href="/journal"
-            className="rounded border border-bg-border px-2 py-1 text-xs text-muted hover:border-accent hover:text-accent"
-          >
-            📓<span className="ml-1 hidden sm:inline">Journal</span>
-          </Link>
-          <Link
-            href="/bot"
-            className="rounded border border-accent/60 bg-accent/10 px-2 py-1 text-xs font-semibold text-accent hover:bg-accent/20"
-          >
-            🤖<span className="ml-1 hidden sm:inline">Bot</span>
-          </Link>
-          <Link
-            href="/intel"
-            className="rounded border border-bg-border px-2 py-1 text-xs text-muted hover:border-accent hover:text-accent"
-          >
-            🌐<span className="ml-1 hidden sm:inline">Intel</span>
-          </Link>
-        </div>
-        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <CandleCountdown candles={candles} interval={interval} />
-          <VolatilityBadge candles={candles} />
-          <FearGreedBadge />
-          <ConnectionStatus />
-          {selectedTicker && (
-            <div className="hidden items-baseline gap-3 font-mono text-sm sm:flex">
-              <span className="text-lg font-semibold tabular-nums">
-                {formatPrice(selectedTicker.last_price)}
-              </span>
-              <span
-                className={
-                  selectedTicker.change_pct >= 0 ? "text-up" : "text-down"
-                }
-              >
-                {selectedTicker.change_pct >= 0 ? "+" : ""}
-                {selectedTicker.change_pct.toFixed(2)}%
-              </span>
-            </div>
-          )}
-        </div>
-      </header>
+      <DashboardHeader
+        selectedTicker={selectedTicker}
+        candles={candles}
+        interval={interval}
+      />
 
       <Toasts />
 
@@ -227,14 +158,10 @@ export default function Dashboard() {
       <RiskPanel />
       <UpcomingEvents />
       <NewsTicker />
-      <MarketOverview
-        tickers={tickers}
-        selected={symbol}
-        onSelect={setSymbol}
-      />
+      <MarketOverview tickers={tickers} selected={symbol} onSelect={setSymbol} />
       {selectedTicker && <RangePosition ticker={selectedTicker} />}
 
-      {/* ===== Mobile: tabbed single column (< lg) ===== */}
+      {/* ===== Mobile ===== */}
       <div className="flex min-h-0 flex-1 flex-col gap-px bg-bg-border lg:hidden">
         <nav className="grid grid-cols-3 border-b border-bg-border bg-bg-panel text-xs">
           {(
@@ -270,8 +197,6 @@ export default function Dashboard() {
             </section>
             <IndicatorsPanel symbol={symbol} interval={interval} />
             <ConfluenceGauge symbol={symbol} />
-            <MTFMatrix symbol={symbol} />
-            <TradeSetupCard symbol={symbol} />
             <section className="min-h-0 flex-1 bg-bg-panel">
               {sidebarTab === "watchlist" ? (
                 <Watchlist tickers={tickers} selected={symbol} onSelect={setSymbol} />
@@ -336,91 +261,16 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ===== Desktop: full terminal grid (lg+) ===== */}
+      {/* ===== Desktop ===== */}
       <div className="hidden min-h-0 flex-1 grid-cols-[240px_1fr_260px] grid-rows-[1fr_240px] gap-px bg-bg-border lg:grid">
-        {/* Sidebar: Watchlist / Scanner tabs + mini equity */}
-        <section className="row-span-2 grid min-h-0 grid-rows-[auto_1fr_auto] bg-bg-panel">
-          <div className="grid grid-cols-2 border-b border-bg-border">
-            {(
-              [
-                ["watchlist", "Watch"],
-                ["scanner", "Scan"],
-                ["movers", "Movers"],
-                ["heatmap", "🔥"],
-                ["whale", "🦈"],
-                ["positioning", "📊"],
-                ["pivots", "🎯"],
-                ["alerts", "🔔"],
-                ["funding", "💸"],
-              ] as [
-                "watchlist" | "scanner" | "movers" | "heatmap" | "whale" | "positioning" | "pivots" | "alerts" | "funding",
-                string,
-              ][]
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                onClick={() => setSidebarTab(id)}
-                title={
-                  id === "heatmap"
-                    ? "Whale footprint heatmap"
-                    : id === "whale"
-                      ? "Smart money radar"
-                      : id === "positioning"
-                        ? "Open interest & L/S ratios"
-                        : id === "pivots"
-                          ? "Pivot points"
-                          : id === "alerts"
-                            ? "Price alerts"
-                            : id === "funding"
-                              ? "Funding rates"
-                              : undefined
-                }
-                className={`py-2 text-xs ${
-                  sidebarTab === id
-                    ? "bg-bg-hover font-semibold text-white"
-                    : "text-muted hover:text-white"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="min-h-0">
-            {sidebarTab === "watchlist" ? (
-              <Watchlist tickers={tickers} selected={symbol} onSelect={setSymbol} />
-            ) : sidebarTab === "scanner" ? (
-              <ScannerPanel onSelect={setSymbol} />
-            ) : sidebarTab === "movers" ? (
-              <MoversPanel tickers={tickers} selected={symbol} onSelect={setSymbol} />
-            ) : sidebarTab === "heatmap" ? (
-              <WhaleHeatmap symbol={symbol} />
-            ) : sidebarTab === "whale" ? (
-              <SmartMoneyPanel symbol={symbol} />
-            ) : sidebarTab === "positioning" ? (
-              <PositioningPanel symbol={symbol} />
-            ) : sidebarTab === "pivots" ? (
-              <PivotLevels
-                symbol={symbol}
-                currentPrice={selectedTicker?.last_price ?? null}
-              />
-            ) : sidebarTab === "alerts" ? (
-              <AlertsPanel symbol={symbol} />
-            ) : (
-              <FundingPanel onSelect={setSymbol} />
-            )}
-          </div>
-
-          {/* Analysis stack — bottom half of sidebar */}
-          <div className="grid shrink-0 grid-rows-[auto_auto_auto] border-t border-bg-border">
-            <ConfluenceGauge symbol={symbol} />
-            <MTFMatrix symbol={symbol} />
-            <div className="max-h-[190px] overflow-y-auto">
-              <TradeSetupCard symbol={symbol} />
-            </div>
-          </div>
-
-          <MiniEquity />
-        </section>
+        <SidebarPanel
+          tab={sidebarTab}
+          onTabChange={setSidebarTab}
+          tickers={tickers}
+          symbol={symbol}
+          currentPrice={selectedTicker?.last_price ?? null}
+          onSelect={setSymbol}
+        />
 
         {/* Chart */}
         <section className="grid min-h-0 grid-rows-[1fr_auto] bg-bg-panel">
@@ -435,7 +285,7 @@ export default function Dashboard() {
           <IndicatorsPanel symbol={symbol} interval={interval} />
         </section>
 
-        {/* Right column: order book + tape + ticket */}
+        {/* Right column */}
         <section className="row-span-2 grid min-h-0 grid-cols-2 grid-rows-[auto_1fr_auto] bg-bg-panel">
           <OrderFlowStats symbol={symbol} />
           <div className="col-span-2 grid min-h-0 grid-cols-2 gap-px bg-bg-border">
@@ -460,7 +310,7 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Bottom panel: positions/orders + signals */}
+        {/* Bottom panel */}
         <section className="col-start-2 grid min-h-0 grid-cols-[1fr_320px] gap-px bg-bg-border">
           <div className="grid min-h-0 grid-rows-[1fr_auto] bg-bg-panel">
             <div className="min-h-0">
