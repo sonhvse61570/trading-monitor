@@ -108,7 +108,6 @@ export default function CandleChart({
       timeScale: { timeVisible: true, secondsVisible: false },
       rightPriceScale: { borderColor: "#232a35" },
       crosshair: { mode: 0 },
-      autoSize: true,
     });
     const series = chart.addCandlestickSeries({
       upColor: "#0ecb81",
@@ -143,20 +142,24 @@ export default function CandleChart({
     ema9Ref.current = ema9;
     ema21Ref.current = ema21;
 
-    // Explicitly track container size so the canvas follows panel
-    // resizes (sidebar drags) even if autoSize misses them.
+    // Explicitly own sizing: observe container and drive chart.resize()
+    // so the canvas follows sidebar drags frame-by-frame.
+    let raf = 0;
     const ro = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
       const { width, height } = entry.contentRect;
-      if (width > 0 && height > 0) {
+      if (width <= 0 || height <= 0) return;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
         chart.resize(Math.floor(width), Math.floor(height));
-      }
+      });
     });
     if (containerRef.current) ro.observe(containerRef.current);
 
     return () => {
       ro.disconnect();
+      cancelAnimationFrame(raf);
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;

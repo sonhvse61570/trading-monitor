@@ -363,8 +363,8 @@ export default function Dashboard() {
         {/* Center column: chart + bottom panel */}
         <div className="grid min-h-0 min-w-0 flex-1 grid-rows-[1fr_240px]">
           {/* Chart */}
-          <section className="grid min-h-0 grid-rows-[1fr_auto] bg-bg-panel">
-            <div className="min-h-0">
+          <section className="grid min-h-0 min-w-0 grid-rows-[1fr_auto] bg-bg-panel">
+            <div className="min-h-0 min-w-0 overflow-hidden">
               <CandleChart
                 candles={candles}
                 symbol={symbol}
@@ -376,9 +376,9 @@ export default function Dashboard() {
           </section>
 
           {/* Bottom panel */}
-          <section className="grid min-h-0 grid-cols-[1fr_320px] gap-px bg-bg-border border-t border-bg-border">
-            <div className="grid min-h-0 grid-rows-[1fr_auto] bg-bg-panel">
-              <div className="min-h-0">
+          <section className="grid min-h-0 min-w-0 grid-cols-[minmax(0,1fr)_320px] gap-px bg-bg-border border-t border-bg-border">
+            <div className="grid min-h-0 min-w-0 grid-rows-[1fr_auto] bg-bg-panel">
+              <div className="min-h-0 min-w-0 overflow-hidden">
                 <PositionsOrders
                   positions={positions}
                   openOrders={openOrders}
@@ -401,7 +401,7 @@ export default function Dashboard() {
 
         {/* Right column */}
         <section className="grid min-h-0 shrink-0 overflow-hidden bg-bg-panel" style={{ width: rightW }}>
-          <div className="grid min-h-0 w-full grid-cols-2 grid-rows-[auto_1fr_auto]">
+          <div className="grid min-h-0 w-full min-w-0 grid-cols-2 grid-rows-[auto_1fr_auto]">
             <OrderFlowStats symbol={symbol} />
             <div className="col-span-2 grid min-h-0 grid-cols-2 gap-px bg-bg-border">
               <div className="min-h-0 overflow-hidden bg-bg-panel">
