@@ -52,6 +52,17 @@ async def confluence(symbol: str) -> dict[str, Any]:
     return await confluence_score(symbol)
 
 
+@router.get("/zones")
+async def zones(
+    symbol: str,
+    interval: str = Query(default="1h"),
+) -> dict[str, Any]:
+    """Clustered support/resistance zones with strength scoring."""
+    from app.zones import detect_zones
+
+    return await detect_zones(symbol, interval)
+
+
 @router.get("/patterns")
 async def patterns(
     symbol: str,
