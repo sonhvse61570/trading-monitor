@@ -13,8 +13,13 @@ router = APIRouter(tags=["screener"])
 _cache: tuple[float, list[dict[str, Any]]] | None = None
 
 
-async def _enrich(sym: str, ticker: dict[str, Any]) -> dict[str, Any] | None:
-    """Compute full metric set for one symbol."""
+_cache: tuple[float, list[dict[str, Any]], str] | None = None
+
+
+async def _enrich(
+    sym: str, ticker: dict[str, Any], tf: str = "15m"
+) -> dict[str, Any] | None:
+    """Compute full metric set for one symbol on the chosen timeframe."""
     from app.adapters import get_market_adapter
     from app.indicators import ema, latest, rsi
     from app.score import confluence_score
@@ -22,7 +27,7 @@ async def _enrich(sym: str, ticker: dict[str, Any]) -> dict[str, Any] | None:
     adapter = get_market_adapter()
     try:
         c = await confluence_score(sym)
-        candles = await adapter.klines(sym, "15m", 60)
+        candles = await adapter.klines(sym, tf, 60)
         closes = [x["close"] for x in candles]
 
         r14 = latest(rsi(closes, 14))
@@ -80,6 +85,7 @@ async def _enrich(sym: str, ticker: dict[str, Any]) -> dict[str, Any] | None:
             "bias": c["bias"],
             "mtf": c.get("mtf_alignment"),
             "cvd": c.get("cvd"),
+            "timeframe": tf,
             "rsi": round(r14, 1) if r14 else None,
             "trend_ema": (
                 "up" if e20 and e50 and e20 > e50 else ("down" if e20 and e50 else None)
@@ -97,21 +103,23 @@ async def _enrich(sym: str, ticker: dict[str, Any]) -> dict[str, Any] | None:
 async def accumulation(
     top: int = Query(default=15, ge=5, le=30),
     refresh: int = Query(default=0, ge=0, le=1),
+    tf: str = Query(default="15m", pattern="^(5m|15m|1h|4h)$"),
 ) -> dict[str, Any]:
     """Coins whales may be quietly accumulating (Wyckoff signatures)."""
     from app.accumulation import scan_accumulation
 
-    return await scan_accumulation(top, force=bool(refresh))
+    return await scan_accumulation(top, force=bool(refresh), tf=tf)
 
 
 @router.get("/api/screener")
 async def screener(
     top: int = Query(default=25, ge=5, le=40),
+    tf: str = Query(default="15m", pattern="^(5m|15m|1h|4h)$"),
 ) -> dict[str, Any]:
     """Rich ranking of liquid symbols by confluence score."""
     global _cache
     now = time.time()
-    if _cache and now - _cache[0] < 180:
+    if _cache and now - _cache[0] < 180 and _cache[2] == tf:
         return {"count": len(_cache[1]), "rows": _cache[1][:top]}
 
     from app.adapters import get_market_adapter
@@ -130,12 +138,12 @@ async def screener(
     candidates = candidates[:top]
 
     results = await asyncio.gather(
-        *(_enrich(t["symbol"], t) for t in candidates)
+        *(_enrich(t["symbol"], t, tf) for t in candidates)
     )
     rows = sorted(
         (r for r in results if r is not None),
         key=lambda r: abs(r["score"] - 50),
         reverse=True,
     )
-    _cache = (now, rows)
-    return {"count": len(rows), "rows": rows}
+    _cache = (now, rows, tf)
+    return {"count": len(rows), "rows": rows, "timeframe": tf}

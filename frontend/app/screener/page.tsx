@@ -90,8 +90,11 @@ const SIGNAL_LABELS: [string, string][] = [
   ["funding_cool", "❄️ Funding lạnh"],
 ];
 
+const TFS = ["5m", "15m", "1h", "4h"] as const;
+
 export default function ScreenerPage() {
   const [tab, setTab] = useState<"rank" | "accum">("rank");
+  const [tf, setTf] = useState<string>("15m");
   const [rows, setRows] = useState<Row[]>([]);
   const [accRows, setAccRows] = useState<AccRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,11 +103,15 @@ export default function ScreenerPage() {
   const [sortKey, setSortKey] = useState<SortKey>("score");
   const [asc, setAsc] = useState(false);
 
+  // Ranking re-fetches when timeframe changes.
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     async function load() {
       try {
-        const r = await fetch("/api/screener?top=25").then((x) => x.json());
+        const r = await fetch(`/api/screener?top=25&tf=${tf}`).then((x) =>
+          x.json()
+        );
         if (!cancelled) setRows(r.rows ?? []);
       } catch {
         /* keep old */
@@ -118,26 +125,30 @@ export default function ScreenerPage() {
       cancelled = true;
       clearInterval(id);
     };
-  }, []);
+  }, [tf]);
 
-  // Accumulation loads lazily when its tab opens.
-  const loadAcc = useCallback((force: boolean) => {
-    let cancelled = false;
-    setAccLoading(true);
-    fetch(`/api/screener/accumulation?top=20&refresh=${force ? 1 : 0}`)
-      .then((x) => x.json())
-      .then((r) => !cancelled && setAccRows(r.rows ?? []))
-      .catch(() => undefined)
-      .finally(() => !cancelled && setAccLoading(false));
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // Accumulation loads lazily when its tab opens; re-fetch on TF change.
+  const loadAcc = useCallback(
+    (force: boolean) => {
+      let cancelled = false;
+      setAccLoading(true);
+      fetch(`/api/screener/accumulation?top=20&refresh=${force ? 1 : 0}&tf=${tf}`)
+        .then((x) => x.json())
+        .then((r) => !cancelled && setAccRows(r.rows ?? []))
+        .catch(() => undefined)
+        .finally(() => !cancelled && setAccLoading(false));
+      return () => {
+        cancelled = true;
+      };
+    },
+    [tf]
+  );
 
   useEffect(() => {
-    if (tab !== "accum" || accRows.length > 0) return;
-    return loadAcc(false);
-  }, [tab, accRows.length, loadAcc]);
+    if (tab !== "accum") return;
+    return loadAcc(accRows.length === 0 ? false : true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, tf]);
 
   const filtered = useMemo(() => {
     const f = rows.filter((r) =>
@@ -187,6 +198,26 @@ export default function ScreenerPage() {
               }`}
             >
               {label}
+            </button>
+          ))}
+        </div>
+        {/* Timeframe selector */}
+        <div
+          className="flex gap-0.5 rounded-lg border border-bg-border bg-bg-panel p-0.5"
+          title="Khung thời gian scan — đổi khung sẽ quét lại"
+        >
+          <span className="px-1 text-[10px] leading-[22px] text-muted">TF:</span>
+          {TFS.map((t) => (
+            <button
+              key={t}
+              onClick={() => setTf(t)}
+              className={`rounded px-2 py-0.5 font-mono text-[11px] ${
+                tf === t
+                  ? "bg-accent/25 font-bold text-accent"
+                  : "text-muted hover:text-white"
+              }`}
+            >
+              {t}
             </button>
           ))}
         </div>

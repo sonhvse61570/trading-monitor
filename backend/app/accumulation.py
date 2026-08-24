@@ -26,7 +26,7 @@ import httpx
 
 from app.adapters import get_market_adapter
 
-_cache: tuple[float, list[dict[str, Any]]] | None = None
+_cache: tuple[float, list[dict[str, Any]], str] | None = None
 
 FUTURES = "https://fapi.binance.com"
 
@@ -93,10 +93,20 @@ def _classify_phase(signals: dict[str, bool], score: float) -> str:
     return "B · Đang build"
 
 
-async def _scan_one(sym: str, ticker: dict[str, Any]) -> dict[str, Any] | None:
+# Interval config: (klines_interval, oi_period, oi_limit, range_label)
+_TF_CFG = {
+    "5m": ("5m", "1h", 24, "1h"),
+    "15m": ("15m", "1h", 12, "3h"),
+    "1h": ("1h", "1h", 12, "12h"),
+    "4h": ("4h", "4h", 6, "24h"),
+}
+
+
+async def _scan_one(sym: str, ticker: dict[str, Any], tf: str = "15m") -> dict[str, Any] | None:
+    kl_iv, oi_period, oi_limit, range_lbl = _TF_CFG.get(tf, _TF_CFG["15m"])
     adapter = get_market_adapter()
     try:
-        candles = await adapter.klines(sym, "15m", 60)
+        candles = await adapter.klines(sym, kl_iv, 60)
         closes = [c["close"] for c in candles]
         if len(closes) < 40:
             return None
@@ -109,7 +119,7 @@ async def _scan_one(sym: str, ticker: dict[str, Any]) -> dict[str, Any] | None:
             async with httpx.AsyncClient(timeout=10) as client:
                 r = await client.get(
                     f"{FUTURES}/fapi/v1/klines",
-                    params={"symbol": sym, "interval": "15m", "limit": 60},
+                    params={"symbol": sym, "interval": kl_iv, "limit": 60},
                 )
             for row in r.json():
                 vol, tb = float(row[5]), float(row[9])
@@ -131,7 +141,7 @@ async def _scan_one(sym: str, ticker: dict[str, Any]) -> dict[str, Any] | None:
             async with httpx.AsyncClient(timeout=8) as client:
                 r = await client.get(
                     f"{FUTURES}/futures/data/openInterestHist",
-                    params={"symbol": sym, "period": "1h", "limit": 12},
+                    params={"symbol": sym, "period": oi_period, "limit": oi_limit},
                 )
                 rows = r.json()
             if isinstance(rows, list) and len(rows) >= 6:
@@ -204,8 +214,8 @@ async def _scan_one(sym: str, ticker: dict[str, Any]) -> dict[str, Any] | None:
             parts.append(f"Open Interest đang xây dựng ({oi_chg:+.1f}%/6h) — vị thế mới liên tục được mở.")
         if vol_pts >= 10:
             parts.append(
-                f"Volume gấp {rel_vol:.1f}x trung bình nhưng range 3h chỉ {range_pct * 100:.1f}% "
-                "— hoạt động dồn nén trong vùng giá hẹp."
+                f"Volume gấp {rel_vol:.1f}x trung bình nhưng range {range_lbl} chỉ {range_pct * 100:.1f}% "
+                f"(khung {tf}) — hoạt động dồn nén trong vùng giá hẹp."
             )
         if whale_pts >= 10:
             side = "mua" if (whale_net or 0) >= 0 else "bán"
@@ -240,6 +250,7 @@ async def _scan_one(sym: str, ticker: dict[str, Any]) -> dict[str, Any] | None:
             "cvd_momentum": round(cvd_mom, 3),
             "price_change_3h_pct": round(price_chg * 100, 2),
             "oi_change_6h_pct": oi_chg,
+            "timeframe": tf,
             "rel_volume": round(rel_vol, 2),
             "range_3h_pct": round(range_pct * 100, 2),
             "whale_net_usd": whale_net,
@@ -256,10 +267,10 @@ async def _scan_one(sym: str, ticker: dict[str, Any]) -> dict[str, Any] | None:
         return None
 
 
-async def scan_accumulation(top: int = 20, force: bool = False) -> dict[str, Any]:
+async def scan_accumulation(top: int = 20, force: bool = False, tf: str = "15m") -> dict[str, Any]:
     global _cache
     now = time.time()
-    if not force and _cache and now - _cache[0] < 180:
+    if not force and _cache and now - _cache[0] < 180 and _cache[2] == tf:
         return {"count": len(_cache[1]), "rows": _cache[1][:top]}
 
     adapter = get_market_adapter()
@@ -277,7 +288,7 @@ async def scan_accumulation(top: int = 20, force: bool = False) -> dict[str, Any
     candidates = candidates[:top]
 
     results = await asyncio.gather(
-        *(_scan_one(t["symbol"], t) for t in candidates)
+        *(_scan_one(t["symbol"], t, tf) for t in candidates)
     )
     rows = sorted(
         (r for r in results if r is not None),
@@ -306,5 +317,5 @@ async def scan_accumulation(top: int = 20, force: bool = False) -> dict[str, Any
             r["hours_accumulating"] = 0.0
             r["score_trend"] = "new"
 
-    _cache = (now, rows)
-    return {"count": len(rows), "rows": rows}
+    _cache = (now, rows, tf)
+    return {"count": len(rows), "rows": rows, "timeframe": tf}
