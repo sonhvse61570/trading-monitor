@@ -191,14 +191,23 @@ export default function ScreenerPage() {
           ))}
         </div>
         {tab === "accum" && (
-          <button
-            onClick={() => loadAcc(true)}
-            disabled={accLoading}
-            title="Quét lại ngay (bỏ qua cache 3 phút)"
-            className="rounded border border-accent/40 px-2 py-1 text-[11px] text-accent hover:bg-accent/10 disabled:opacity-50"
-          >
-            ⟳ Quét lại
-          </button>
+          <>
+            <button
+              onClick={() => loadAcc(true)}
+              disabled={accLoading}
+              title="Quét lại ngay (bỏ qua cache 3 phút)"
+              className="rounded border border-accent/40 px-2 py-1 text-[11px] text-accent hover:bg-accent/10 disabled:opacity-50"
+            >
+              ⟳ Quét lại
+            </button>
+            <Link
+              href="/screener/guide"
+              title="Hướng dẫn sử dụng & diễn giải"
+              className="rounded border border-bg-border px-2 py-1 text-[11px] text-muted hover:border-accent hover:text-accent"
+            >
+              ❓ Hướng dẫn
+            </Link>
+          </>
         )}
         <div className="ml-auto flex gap-1">
           {tab === "rank" &&
