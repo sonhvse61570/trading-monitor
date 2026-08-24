@@ -1,7 +1,7 @@
 "use client";
 
 // 🔍 Screener — rich ranking + 🥷 stealth accumulation detector.
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatPrice } from "@/components/Watchlist";
 
@@ -28,6 +28,9 @@ interface AccRow {
   change_pct: number;
   score: number;
   assessment?: string;
+  phase?: string;
+  hours_accumulating?: number;
+  score_trend?: "rising" | "falling" | "steady" | "new";
   oi_change_6h_pct: number | null;
   rel_volume: number | null;
   range_3h_pct: number | null;
@@ -64,6 +67,20 @@ const COLUMNS: { key: SortKey; label: string; title: string }[] = [
   { key: "funding_pct", label: "Funding%", title: "Funding rate hiện tại" },
   { key: "oi_change_6h_pct", label: "OI 6h%", title: "Open Interest thay đổi 6h" },
 ];
+
+const TREND_META: Record<string, { icon: string; cls: string; label: string }> = {
+  rising: { icon: "↗", cls: "text-up", label: "Score đang tăng" },
+  falling: { icon: "↘", cls: "text-down", label: "Score đang giảm" },
+  steady: { icon: "→", cls: "text-muted", label: "Score ổn định" },
+  new: { icon: "✦", cls: "text-accent", label: "Mới phát hiện" },
+};
+
+function fmtHours(h: number): string {
+  if (h <= 0) return "vừa phát hiện";
+  if (h < 1) return `${Math.round(h * 60)} phút`;
+  if (h < 24) return `${h.toFixed(1)} giờ`;
+  return `${(h / 24).toFixed(1)} ngày`;
+}
 
 const SIGNAL_LABELS: [string, string][] = [
   ["absorption", "🧽 Hấp thụ"],
@@ -104,11 +121,10 @@ export default function ScreenerPage() {
   }, []);
 
   // Accumulation loads lazily when its tab opens.
-  useEffect(() => {
-    if (tab !== "accum" || accRows.length > 0) return;
+  const loadAcc = useCallback((force: boolean) => {
     let cancelled = false;
     setAccLoading(true);
-    fetch("/api/screener/accumulation?top=20")
+    fetch(`/api/screener/accumulation?top=20&refresh=${force ? 1 : 0}`)
       .then((x) => x.json())
       .then((r) => !cancelled && setAccRows(r.rows ?? []))
       .catch(() => undefined)
@@ -116,7 +132,12 @@ export default function ScreenerPage() {
     return () => {
       cancelled = true;
     };
-  }, [tab, accRows.length]);
+  }, []);
+
+  useEffect(() => {
+    if (tab !== "accum" || accRows.length > 0) return;
+    return loadAcc(false);
+  }, [tab, accRows.length, loadAcc]);
 
   const filtered = useMemo(() => {
     const f = rows.filter((r) =>
@@ -169,6 +190,16 @@ export default function ScreenerPage() {
             </button>
           ))}
         </div>
+        {tab === "accum" && (
+          <button
+            onClick={() => loadAcc(true)}
+            disabled={accLoading}
+            title="Quét lại ngay (bỏ qua cache 3 phút)"
+            className="rounded border border-accent/40 px-2 py-1 text-[11px] text-accent hover:bg-accent/10 disabled:opacity-50"
+          >
+            ⟳ Quét lại
+          </button>
+        )}
         <div className="ml-auto flex gap-1">
           {tab === "rank" &&
             (
@@ -368,10 +399,11 @@ export default function ScreenerPage() {
                 <th className="px-3 py-2">Symbol</th>
                 <th className="px-3 py-2 text-right">Giá</th>
                 <th className="px-3 py-2 text-center">Score</th>
-                <th className="px-3 py-2">Dấu hiệu Wyckoff</th>
+                <th className="px-3 py-2">Phase Wyckoff</th>
+                <th className="px-3 py-2">Dấu hiệu</th>
+                <th className="px-3 py-2 text-right">Thời gian gom</th>
+                <th className="px-3 py-2 text-right">Trend</th>
                 <th className="px-3 py-2 text-right">OI 6h</th>
-                <th className="px-3 py-2 text-right">R-Vol</th>
-                <th className="px-3 py-2 text-right">Range 3h</th>
                 <th className="px-3 py-2 text-right">Whale Net</th>
                 <th className="px-3 py-2" />
               </tr>
@@ -386,12 +418,14 @@ export default function ScreenerPage() {
               )}
               {!accLoading && accRows.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-4 py-10 text-center text-muted">
+                  <td colSpan={11} className="px-4 py-10 text-center text-muted">
                     Hiện không có coin nào đủ dấu hiệu gom hàng âm thầm.
                   </td>
                 </tr>
               )}
-              {accRows.map((r, i) => (
+              {accRows.map((r, i) => {
+                const tm = TREND_META[r.score_trend ?? "new"];
+                return (
                 <tr
                   key={r.symbol}
                   title={r.assessment}
@@ -417,19 +451,43 @@ export default function ScreenerPage() {
                       {r.score}
                     </span>
                   </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                        r.phase?.startsWith("D")
+                          ? "bg-up text-black"
+                          : r.phase?.startsWith("C")
+                            ? "bg-accent/25 text-accent"
+                            : "bg-bg-hover text-muted"
+                      }`}
+                    >
+                      {r.phase ?? "—"}
+                    </span>
+                  </td>
                   <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-1">
                       {SIGNAL_LABELS.map(([key, label]) =>
                         r.signals[key] ? (
                           <span
                             key={key}
-                            className="rounded bg-up/15 px-1.5 py-0.5 text-[9px] text-up"
+                            className="rounded bg-up/15 px-1 py-0.5 text-[9px] text-up"
                           >
-                            {label}
+                            {label.split(" ")[0]}
                           </span>
                         ) : null
                       )}
                     </div>
+                  </td>
+                  <td className="px-3 py-2 text-right text-[11px] text-muted" title="Kể từ lần đầu phát hiện dấu hiệu trong 24h qua">
+                    🕐 {fmtHours(r.hours_accumulating ?? 0)}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <span
+                      className={`${tm.cls} font-semibold`}
+                      title={tm.label}
+                    >
+                      {tm.icon} {r.score_trend ?? "new"}
+                    </span>
                   </td>
                   <td
                     className={`px-3 py-2 text-right tabular-nums ${
@@ -443,12 +501,6 @@ export default function ScreenerPage() {
                     {r.oi_change_6h_pct != null
                       ? `${r.oi_change_6h_pct >= 0 ? "+" : ""}${r.oi_change_6h_pct.toFixed(1)}%`
                       : "—"}
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums text-muted">
-                    {r.rel_volume?.toFixed(2) ?? "—"}
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums text-muted">
-                    {r.range_3h_pct?.toFixed(2)}%
                   </td>
                   <td
                     className={`px-3 py-2 text-right tabular-nums ${
@@ -472,7 +524,8 @@ export default function ScreenerPage() {
                     </Link>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -480,7 +533,7 @@ export default function ScreenerPage() {
 
       <p className="mt-3 text-center text-[11px] leading-relaxed text-muted">
         {
-          "Score = MTF + chỉ báo + whales + CVD + order book + volatility · R-Vol > 1.5 = volume spike · Funding âm = squeeze fuel · OI tăng + giá tăng = trend healthy"
+          "Score = MTF + chỉ báo + whales + CVD + order book + volatility · Phase D = Markup gần, C = Spring test, B = đang build · Thời gian gom tính từ lần đầu phát hiện (lưu 24h) · Trend = so với median score trước đó"
         }
       </p>
     </main>

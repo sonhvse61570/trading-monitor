@@ -16,6 +16,8 @@ Score ≥ 60 → likely stealth accumulation zone.
 from __future__ import annotations
 
 import asyncio
+import os
+import sqlite3
 import statistics
 import time
 from typing import Any
@@ -27,6 +29,68 @@ from app.adapters import get_market_adapter
 _cache: tuple[float, list[dict[str, Any]]] | None = None
 
 FUTURES = "https://fapi.binance.com"
+
+# --- Persistence: score history so we know HOW LONG whales have been loading ---
+_DB_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+os.makedirs(_DB_DIR, exist_ok=True)
+_DB_PATH = os.path.join(_DB_DIR, "accum.db")
+
+
+def _init_db() -> None:
+    with sqlite3.connect(_DB_PATH) as conn:
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS acc_history (
+                symbol TEXT NOT NULL,
+                ts     INTEGER NOT NULL,
+                score  REAL NOT NULL
+            )"""
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_acc_sym_ts ON acc_history(symbol, ts)"
+        )
+
+
+_init_db()
+
+
+def _record_history(rows: list[dict[str, Any]]) -> None:
+    now = int(time.time())
+    try:
+        with sqlite3.connect(_DB_PATH) as conn:
+            conn.executemany(
+                "INSERT INTO acc_history(symbol, ts, score) VALUES(?,?,?)",
+                [(r["symbol"], now, r["score"]) for r in rows],
+            )
+            # Keep only 7 days.
+            conn.execute(
+                "DELETE FROM acc_history WHERE ts < ?", (now - 7 * 86400,)
+            )
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _load_history() -> dict[str, list[tuple[int, float]]]:
+    since = int(time.time()) - 86400  # 24h window
+    out: dict[str, list[tuple[int, float]]] = {}
+    try:
+        with sqlite3.connect(_DB_PATH) as conn:
+            for sym, ts, score in conn.execute(
+                "SELECT symbol, ts, score FROM acc_history WHERE ts >= ? ORDER BY ts",
+                (since,),
+            ):
+                out.setdefault(sym, []).append((ts, score))
+    except Exception:  # noqa: BLE001
+        pass
+    return out
+
+
+def _classify_phase(signals: dict[str, bool], score: float) -> str:
+    n = sum(signals.values())
+    if n >= 4 and score >= 70:
+        return "D · Markup gần"
+    if n >= 3:
+        return "C · Spring test"
+    return "B · Đang build"
 
 
 async def _scan_one(sym: str, ticker: dict[str, Any]) -> dict[str, Any] | None:
@@ -156,12 +220,23 @@ async def _scan_one(sym: str, ticker: dict[str, Any]) -> dict[str, Any] | None:
             + (" ".join(parts) if parts else "Chưa đủ dấu hiệu rõ ràng.")
         )
 
+        phase = _classify_phase(
+            {
+                "absorption": div_pts >= 15,
+                "oi_building": oi_pts >= 10,
+                "quiet_volume": vol_pts >= 10,
+                "whale_buying": whale_pts >= 10,
+                "funding_cool": fund_pts >= 10,
+            },
+            score,
+        )
         return {
             "symbol": sym,
             "price": ticker["last_price"],
             "change_pct": ticker["change_pct"],
             "score": score,
             "assessment": verdict,
+            "phase": phase,
             "cvd_momentum": round(cvd_mom, 3),
             "price_change_3h_pct": round(price_chg * 100, 2),
             "oi_change_6h_pct": oi_chg,
@@ -181,10 +256,10 @@ async def _scan_one(sym: str, ticker: dict[str, Any]) -> dict[str, Any] | None:
         return None
 
 
-async def scan_accumulation(top: int = 20) -> dict[str, Any]:
+async def scan_accumulation(top: int = 20, force: bool = False) -> dict[str, Any]:
     global _cache
     now = time.time()
-    if _cache and now - _cache[0] < 180:
+    if not force and _cache and now - _cache[0] < 180:
         return {"count": len(_cache[1]), "rows": _cache[1][:top]}
 
     adapter = get_market_adapter()
@@ -208,5 +283,28 @@ async def scan_accumulation(top: int = 20) -> dict[str, Any]:
         (r for r in results if r is not None),
         key=lambda r: -r["score"],
     )
+
+    # --- Enrich with persistence metrics --- #
+    _record_history(rows)
+    history = _load_history()
+    now_i = int(now)
+    for r in rows:
+        hist = history.get(r["symbol"], [])
+        if hist:
+            first_seen = min(ts for ts, _ in hist)
+            r["hours_accumulating"] = round((now_i - first_seen) / 3600, 1)
+            prior = [s for _, s in hist[:-1]]
+            if prior:
+                med_prior = statistics.median(prior)
+                delta = r["score"] - med_prior
+                r["score_trend"] = (
+                    "rising" if delta > 5 else ("falling" if delta < -5 else "steady")
+                )
+            else:
+                r["score_trend"] = "new"
+        else:
+            r["hours_accumulating"] = 0.0
+            r["score_trend"] = "new"
+
     _cache = (now, rows)
     return {"count": len(rows), "rows": rows}
